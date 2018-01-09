@@ -46,7 +46,7 @@ function drawCutouts() {
 }
 
 function strokeCutoutShapes() {
-    //context.save();
+    context.save();
     context.strokeStyle = 'rgba(0, 0, 0, 0.7)';
 
     context.beginPath();
@@ -59,7 +59,7 @@ function strokeCutoutShapes() {
     addTrianglePath();
     context.stroke();
 
-    //context.restore();
+    context.restore();
 }
 
 function rect(x, y, w, h, direction) {
