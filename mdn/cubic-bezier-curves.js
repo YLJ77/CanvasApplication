@@ -52,12 +52,13 @@ function draw() {
         ]
         
         for (let item of points) {
-            ctx.bezierCurveTo(...item.controlPoint[0], ...item.controlPoint[1], ...item.endPoint);
+            ctx.bezierCurveTo(...item.controlPoint[0].concat(item.controlPoint[1].concat(item.endPoint)));
         }
         //ctx.fill();
         ctx.stroke();
         for (let i=0; i<points.length; i++) {
             curPoint = i === 0 ? curPoint : points[i -1].endPoint;
+            //if (i > 0) return;
             drawGuide({
                 ctx,
                 curPoint: curPoint,
@@ -73,22 +74,47 @@ function drawGuide({
     curPoint,
     endPoint,
     controlPoint,
-    pointSize = 5,
+    pointSize = 2,
     controlPointColor='red',
     pointColor='blue'
 }) {
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.moveTo(...curPoint);
-    ctx.lineTo(...controlPoint[0]);
-    ctx.moveTo(...endPoint);
-    ctx.lineTo(...controlPoint[1]);
-    //ctx.strokeStyle = 'pink';
-    ctx.stroke();
+
     ctx.fillStyle = pointColor;
-    ctx.fillRect(...curPoint, pointSize, pointSize);
-    ctx.fillRect(...endPoint, pointSize, pointSize);
+    ctx.moveTo(...curPoint);
+    ctx.arc(...curPoint, pointSize, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(...curPoint);
     ctx.fillStyle = controlPointColor;
-    ctx.fillRect(...controlPoint[0], pointSize, pointSize);
-    ctx.fillRect(...controlPoint[1], pointSize, pointSize);
+    ctx.lineTo(...controlPoint[0]);
+    ctx.arc(...controlPoint[0], pointSize, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill()
+
+    ctx.beginPath();
+    ctx.moveTo(...controlPoint[0]);
+    ctx.fillStyle = pointColor;
+    ctx.moveTo(...endPoint);
+    ctx.arc(...endPoint, pointSize, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+
+
+    ctx.beginPath();
+    ctx.moveTo(...endPoint);
+    ctx.fillStyle = controlPointColor;
+    ctx.lineTo(...controlPoint[1]);
+    ctx.arc(...controlPoint[1], pointSize, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+
+    // ctx.fillRect(...curPoint, pointSize, pointSize);
+    // ctx.fillRect(...endPoint, pointSize, pointSize);
+    // ctx.fillStyle = controlPointColor;
+    // ctx.fillRect(...controlPoint[0], pointSize, pointSize);
+    // ctx.fillRect(...controlPoint[1], pointSize, pointSize);
 }
