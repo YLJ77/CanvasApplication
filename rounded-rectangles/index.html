@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>A Simple Canvas Example</title>
+        <style>
+body {
+    background: #dddddd;
+}
+canvas {
+    margin: 10px;
+    padding: 10px;
+    background: #ffffff;
+    border: thin inset #aaaaaa;
+}
+#mask-canvas {
+    position: absolute;
+    top: 8px;
+    background-color: transparent;
+    left: 8px;
+}
+        </style>
+    </head>
+    <body>
+        <canvas id='canvas' width='600' height='300'>
+            Canvas not supported
+        </canvas>
+        <canvas id='mask-canvas' width='600' height='300'>
+            Canvas not supported
+        </canvas>
+        <script src='example.js'></script>
+    </body>
+</html>
