@@ -4,6 +4,14 @@ let canvas = document.getElementById('canvas'),
     strokeStyleSelect = document.getElementById('strokeStyleSelect'),
     guidewireCheckbox = document.getElementById('guidewireCheckbox'),
     fillCheckbox = document.getElementById('fillCheckbox'),
+    // ¶à±ßÐÎ start
+    sidesSelect = document.getElementById('sidesNumber'),
+    startAngleSelect = document.getElementById('startAngle'),
+    Point = function (x, y) {
+        this.x = x;
+        this.y = y;
+    },
+    // ¶à±ßÐÎ end
     drawingSurfaceImageData,
     mousedown = {},
     rubberbandRect = {},
@@ -77,16 +85,67 @@ function drawCircle(loc) {
     }
 }
 function drawRubberbandShape(loc) {
-    /*  ç”»ç›´çº¿
-    */
-
-    // ç”»åœ†å½¢
-    drawCircle(loc);
+    // »­Ô²
+    // drawCircle(loc);
+    // »­¶à±ßÐÎ
+    drawPolygon(loc);
 }
 function updateRubberband(loc) {
     updateRubberbandRectangle(loc);
     drawRubberbandShape(loc);
 }
+// Polygon.........................................................
+function getPolygonPoints(centerX, centerY, radius, sides, startAngle) {
+    var points = [],
+        angle = startAngle || 0;
+    for (var i=0; i < sides; ++i) {
+        /*
+        points.push(new Point(centerX + radius * Math.sin(angle),
+            centerY - radius * Math.cos(angle)));
+            */
+
+        points.push(
+            new Point(
+                centerX + radius * Math.cos(angle),
+                centerY - radius * Math.sin(angle)
+            )
+        );
+
+        angle += 2*Math.PI/sides;
+    }
+    return points;
+}
+function createPolygonPath(centerX, centerY, radius, sides, startAngle) {
+    var points = getPolygonPoints(
+        centerX,
+        centerY,
+        radius,
+        sides,
+        startAngle 
+    );
+    context.beginPath();
+    context.moveTo(points[0].x, points[0].y);
+    for (var i=1; i < sides; ++i) {
+        context.lineTo(points[i].x, points[i].y);
+    }
+    context.closePath();
+}
+function drawPolygon(loc) {
+        let {height, width} = rubberbandRect;
+        radius = Math.sqrt(height * height + width * width);
+    createPolygonPath(
+        mousedown.x,
+        mousedown.y,
+        // rubberbandRect.width,
+        radius,
+        parseInt(sidesSelect.value),
+        (Math.PI / 180) * parseInt(startAngleSelect.value)
+    );
+    context.stroke();
+    if (fillCheckbox.checked) {
+        context.fill();
+    }
+} 
 // Guidewires.........................................................
 function drawHorizontalLine (y) {
     context.beginPath();
@@ -149,5 +208,5 @@ guidewireCheckbox.onchange = function (e) {
 };
 // Initialization................................................
 context.strokeStyle = strokeStyleSelect.value;
-drawGrid('lightgray', 10, 10);
+drawGrid('lightgray', 10, 10);
 
