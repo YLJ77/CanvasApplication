@@ -17,7 +17,7 @@
 </style>
 
 <script>
-import { drawGrid } from "../util/appFunc";
+import { drawGrid, drawAxes } from "../util/appFunc";
 
 export default {
     data() {
@@ -34,6 +34,7 @@ export default {
       this.getContext();
       let { context } = this;
       drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
+      drawAxes({ context });
   }
 }
 </script>
