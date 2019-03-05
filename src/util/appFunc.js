@@ -1,4 +1,4 @@
-function drawGrid(color, stepx, stepy) {
+export function drawGrid({ context, color, stepx, stepy }) {
     context.save();
     context.strokeStyle = color;
     context.lineWidth = 0.5;
