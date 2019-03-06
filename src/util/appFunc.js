@@ -1,3 +1,19 @@
+export function restoreDrawingSurface({ context, imgData }) {
+    context.putImageData(imgData, 0, 0);
+}
+
+export function saveDrawingSurface({ context, canvas }) {
+    return context.getImageData(0, 0,
+        canvas.width,
+        canvas.height);
+}
+
+export function windowToCanvas({x, y, canvas}) {
+    var bbox = canvas.getBoundingClientRect();
+    return { x: x - bbox.left * (canvas.width / bbox.width),
+        y: y - bbox.top * (canvas.height / bbox.height) };
+}
+
 export function drawGrid({ context, color, stepx, stepy }) {
     context.save();
     context.strokeStyle = color;

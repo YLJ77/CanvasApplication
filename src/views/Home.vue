@@ -1,40 +1,193 @@
 <template>
   <div>
-    <canvas id="canvas" width='600' height='600'>Canvas not supported</canvas>
+    <canvas
+            @mousedown="onMouseDown"
+            @mousemove="onMouseMove"
+            @mouseup="onMouseUp"
+            id="canvas" width='600' height='600'>Canvas not supported</canvas>
+    <div id='controls'>
+      Stroke color: <select v-model="strokeStyle">
+      <option value='red'>red</option>
+      <option value='green'>green</option>
+      <option value='blue'>blue</option>
+      <option value='orange'>orange</option>
+      <option value='cornflowerblue' selected>cornflowerblue</option>
+      <option value='goldenrod'>goldenrod</option>
+      <option value='navy'>navy</option>
+      <option value='purple'>purple</option>
+    </select>
+      Guidewires:
+      <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
+      <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
   body {
-    background: #ddd;
+    background: #eeeeee;
+  }
+  #controls {
+    position: absolute;
+    left: 25px;
+    top: 25px;
   }
   #canvas {
-    margin: 10px;
-    padding: 10px;
-    background: #fff;
-    border: thin inset #aaa;
+    background: #ffffff;
+    cursor: pointer;
+    margin-left: 10px;
+    margin-top: 10px;
+    -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+    -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+    -box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
   }
 </style>
 
 <script>
-import { drawGrid, drawAxes } from "../util/appFunc";
+import { drawGrid, drawAxes, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
 
 export default {
     data() {
         return {
-            context: null
+            context: null,
+            canvas: null,
+            guidewires: true,
+            strokeStyle: 'cornflowerblue',
+            rubberbandLine: {
+                drawingSurfaceImageData: null,
+                mousedown: {},
+                rubberbandRect: {},
+                dragging: false,
+            }
         }
     },
     methods: {
         getContext() {
-            this.context = document.getElementById('canvas').getContext('2d');
+            this.canvas = document.getElementById('canvas');
+            this.context = this.canvas.getContext('2d');
+        },
+        erase() {
+            let { context, canvas } = this;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            this.drawGrid('lightgray', 10, 10);
+            saveDrawingSurface({ context, canvas });
+        },
+        drawRubberbandLines() {
+            let { context, strokeStyle } = this;
+            context.strokeStyle = strokeStyle;
+            drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
+        },
+        updateRubberbandRectangle({ loc }) {
+            let {
+                rubberbandLine: {
+                    rubberbandRect,
+                    mousedown
+                }
+            } = this;
+            rubberbandRect.width = Math.abs(loc.x - mousedown.x);
+            rubberbandRect.height = Math.abs(loc.y - mousedown.y);
+            if (loc.x > mousedown.x) rubberbandRect.left = mousedown.x;
+            else rubberbandRect.left = loc.x;
+            if (loc.y > mousedown.y) rubberbandRect.top = mousedown.y;
+            else rubberbandRect.top = loc.y;
+        },
+        drawRubberbandShape({ loc }) {
+            let {
+                context,
+                rubberbandLine: {
+                    mousedown
+                }
+            } = this;
+            context.beginPath();
+            context.moveTo(mousedown.x, mousedown.y);
+            context.lineTo(loc.x, loc.y);
+            context.stroke();
+        },
+        updateRubberband({ loc }) {
+            this.updateRubberbandRectangle({ loc });
+            this.drawRubberbandShape({ loc });
+        },
+        drawHorizontalLine ({ y }) {
+            let { context } = this;
+            context.beginPath();
+            context.moveTo(0,y+0.5);
+            context.lineTo(context.canvas.width, y+0.5);
+            context.stroke();
+        },
+        drawVerticalLine ({ x }) {
+            let { context } = this;
+            context.beginPath();
+            context.moveTo(x+0.5,0);
+            context.lineTo(x+0.5, context.canvas.height);
+            context.stroke();
+        },
+        drawGuidewires({ x, y }) {
+            let { context } = this;
+            context.save();
+            context.strokeStyle = 'rgba(0,0,230,0.4)';
+            context.lineWidth = 0.5;
+            this.drawVerticalLine(x);
+            this.drawHorizontalLine(y);
+            context.restore();
+        },
+        onMouseDown(e) {
+            let {
+                context,
+                canvas,
+                rubberbandLine: {
+                    mousedown
+                },
+                rubberbandLine
+            } = this;
+            let { clientX: x, clientY: y } = e;
+            let loc = windowToCanvas({ x, y, canvas });
+            e.preventDefault(); // Prevent cursor change
+            rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ context, canvas });
+            mousedown.x = loc.x;
+            mousedown.y = loc.y;
+            rubberbandLine.dragging = true;
+        },
+        onMouseMove(e) {
+            let {
+                canvas,
+                guidewires,
+                context,
+                rubberbandLine: {
+                    dragging,
+                    drawingSurfaceImageData
+                }
+            } = this;
+            if (dragging) {
+                let { clientX: x, clientY: y } = e;
+                e.preventDefault(); // Prevent selections
+                let loc = windowToCanvas({ x, y, canvas });
+                restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+                this.updateRubberband({ loc });
+                if(guidewires) {
+                    this.drawGuidewires(loc);
+                }
+            }
+        },
+        onMouseUp(e) {
+            let {
+                context,
+                canvas,
+                rubberbandLine,
+                rubberbandLine: {
+                    drawingSurfaceImageData
+                }
+            } = this;
+            let { clientX: x, clientY: y } = e;
+            let loc = windowToCanvas({ x, y, canvas });
+            restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+            this.updateRubberband({ loc });
+            rubberbandLine.dragging = false;
         }
     },
   mounted() {
       this.getContext();
-      let { context } = this;
-      drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
-      drawAxes({ context });
+      this.drawRubberbandLines();
+      // drawAxes({ context });
   }
 }
 </script>
