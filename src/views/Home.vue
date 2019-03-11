@@ -6,7 +6,7 @@
             @mouseup="onMouseUp"
             id="canvas" width='600' height='600'>Canvas not supported</canvas>
     <div id='controls'>
-      Stroke color: <select v-model="strokeStyle">
+      Stroke color: <select v-model="color">
       <option value='red'>red</option>
       <option value='green'>green</option>
       <option value='blue'>blue</option>
@@ -18,6 +18,8 @@
     </select>
       Guidewires:
       <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
+      填充：
+      <input v-model="isFillColor" type='checkbox'/>
       <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
     </div>
   </div>
@@ -49,10 +51,11 @@ import { drawGrid, drawAxes, windowToCanvas, saveDrawingSurface, restoreDrawingS
 export default {
     data() {
         return {
+            isFillColor: false,
             context: null,
             canvas: null,
             guidewires: true,
-            strokeStyle: 'cornflowerblue',
+            color: 'cornflowerblue',
             rubberbandLine: {
                 drawingSurfaceImageData: null,
                 mousedown: {},
@@ -69,12 +72,12 @@ export default {
         erase() {
             let { context, canvas } = this;
             context.clearRect(0, 0, canvas.width, canvas.height);
-            this.drawGrid('lightgray', 10, 10);
+            drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
             saveDrawingSurface({ context, canvas });
         },
         drawRubberbandLines() {
-            let { context, strokeStyle } = this;
-            context.strokeStyle = strokeStyle;
+            let { context, color } = this;
+            context.strokeStyle = color;
             drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
         },
         updateRubberbandRectangle({ loc }) {
@@ -82,7 +85,7 @@ export default {
                 rubberbandLine: {
                     rubberbandRect,
                     mousedown
-                }
+                },
             } = this;
             rubberbandRect.width = Math.abs(loc.x - mousedown.x);
             rubberbandRect.height = Math.abs(loc.y - mousedown.y);
@@ -92,16 +95,57 @@ export default {
             else rubberbandRect.top = loc.y;
         },
         drawRubberbandShape({ loc }) {
+            // this.drawCircle({ loc });
+            this.drawLine({ loc });
+        },
+        drawCircle({ loc }) {
             let {
                 context,
+                guidewires,
+                rubberbandLine: {
+                    rubberbandRect,
+                    mousedown
+                },
+                color,
+                isFillColor
+            } = this;
+            let angle,
+                radius;
+            if (mousedown.y === loc.y) {
+                radius = Math.abs(loc.x - mousedown.x);
+            } else {
+                angle = Math.atan(rubberbandRect.height/rubberbandRect.width);
+                radius = rubberbandRect.height / Math.sin(angle);
+            }
+            context.beginPath();
+            context.arc(mousedown.x, mousedown.y, radius, 0, Math.PI*2, false);
+            context.strokeStyle = color;
+            context.stroke();
+            if (isFillColor) {
+                context.fillStyle = color;
+                context.fill();
+            }
+            if(guidewires) {
+                this.drawGuidewires(mousedown);
+            }
+        },
+        drawLine({ loc }) {
+            let {
+                context,
+                guidewires,
                 rubberbandLine: {
                     mousedown
-                }
+                },
+                color
             } = this;
+            context.strokeStyle = color;
             context.beginPath();
             context.moveTo(mousedown.x, mousedown.y);
             context.lineTo(loc.x, loc.y);
             context.stroke();
+            if(guidewires) {
+                this.drawGuidewires(loc);
+            }
         },
         updateRubberband({ loc }) {
             this.updateRubberbandRectangle({ loc });
@@ -126,8 +170,8 @@ export default {
             context.save();
             context.strokeStyle = 'rgba(0,0,230,0.4)';
             context.lineWidth = 0.5;
-            this.drawVerticalLine(x);
-            this.drawHorizontalLine(y);
+            this.drawVerticalLine({ x });
+            this.drawHorizontalLine({ y });
             context.restore();
         },
         onMouseDown(e) {
@@ -150,7 +194,6 @@ export default {
         onMouseMove(e) {
             let {
                 canvas,
-                guidewires,
                 context,
                 rubberbandLine: {
                     dragging,
@@ -163,9 +206,6 @@ export default {
                 let loc = windowToCanvas({ x, y, canvas });
                 restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
                 this.updateRubberband({ loc });
-                if(guidewires) {
-                    this.drawGuidewires(loc);
-                }
             }
         },
         onMouseUp(e) {
