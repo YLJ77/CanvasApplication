@@ -16,10 +16,15 @@
       <option value='navy'>navy</option>
       <option value='purple'>purple</option>
     </select>
+      shape: <select v-model="shape">
+      <option value='Circle'>circle</option>
+      <option value='Line' selected>line</option>
+      <option value='RoundedRect' selected>RoundedRect</option>
+    </select>
       Guidewires:
       <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
-      填充：
-      <input v-model="isFillColor" type='checkbox'/>
+      <label for="checkbox">填充:</label>
+      <input type="checkbox" id="checkbox" v-model="isFillColor">
       <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
     </div>
   </div>
@@ -51,6 +56,7 @@ import { drawGrid, drawAxes, windowToCanvas, saveDrawingSurface, restoreDrawingS
 export default {
     data() {
         return {
+            shape: 'Line',
             isFillColor: false,
             context: null,
             canvas: null,
@@ -63,6 +69,15 @@ export default {
                 dragging: false,
             }
         }
+    },
+    watch: {
+        isFillColor() {
+            console.log(this.isFillColor);
+        }
+    },
+    mounted() {
+        this.getContext();
+        this.drawRubberbandLines();
     },
     methods: {
         getContext() {
@@ -95,8 +110,41 @@ export default {
             else rubberbandRect.top = loc.y;
         },
         drawRubberbandShape({ loc }) {
-            // this.drawCircle({ loc });
-            this.drawLine({ loc });
+            let { shape } = this;
+            this[`draw${ shape }`]({ loc });
+        },
+        roundedRect({ cornerRadius }) {
+            let { context,
+                rubberbandLine: {
+                    rubberbandRect: { width, height },
+                    mousedown: { x: cornerX, y: cornerY }
+                },
+            } = this;
+            context.moveTo(cornerX + cornerRadius, cornerY);
+            context.arcTo(cornerX + width, cornerY,
+                cornerX + width, cornerY + height,
+                cornerRadius);
+            context.arcTo(cornerX + width, cornerY + height,
+                cornerX, cornerY + height,
+                cornerRadius);
+            context.arcTo(cornerX, cornerY + height,
+                cornerX, cornerY,
+                cornerRadius);
+            context.arcTo(cornerX, cornerY,
+                cornerX + cornerRadius, cornerY,
+                cornerRadius);
+
+        },
+        drawRoundedRect({ cornerRadius = 10 } = {}) {
+            let { context, color, isFillColor } = this;
+            context.beginPath();
+            this.roundedRect({ cornerRadius });
+            context.strokeStyle = color;
+            if (isFillColor) {
+                context.fillStyle = color;
+                context.fill();
+            }
+            context.stroke();
         },
         drawCircle({ loc }) {
             let {
@@ -121,18 +169,15 @@ export default {
             context.arc(mousedown.x, mousedown.y, radius, 0, Math.PI*2, false);
             context.strokeStyle = color;
             context.stroke();
+            console.warn(isFillColor);
             if (isFillColor) {
                 context.fillStyle = color;
                 context.fill();
-            }
-            if(guidewires) {
-                this.drawGuidewires(mousedown);
             }
         },
         drawLine({ loc }) {
             let {
                 context,
-                guidewires,
                 rubberbandLine: {
                     mousedown
                 },
@@ -143,9 +188,6 @@ export default {
             context.moveTo(mousedown.x, mousedown.y);
             context.lineTo(loc.x, loc.y);
             context.stroke();
-            if(guidewires) {
-                this.drawGuidewires(loc);
-            }
         },
         updateRubberband({ loc }) {
             this.updateRubberbandRectangle({ loc });
@@ -195,7 +237,10 @@ export default {
             let {
                 canvas,
                 context,
+                guidewires,
+                shape,
                 rubberbandLine: {
+                    mousedown,
                     dragging,
                     drawingSurfaceImageData
                 }
@@ -206,6 +251,10 @@ export default {
                 let loc = windowToCanvas({ x, y, canvas });
                 restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
                 this.updateRubberband({ loc });
+                if(guidewires) {
+                    let pos = shape === 'Line' ? loc : mousedown;
+                    this.drawGuidewires(pos);
+                }
             }
         },
         onMouseUp(e) {
@@ -224,10 +273,5 @@ export default {
             rubberbandLine.dragging = false;
         }
     },
-  mounted() {
-      this.getContext();
-      this.drawRubberbandLines();
-      // drawAxes({ context });
-  }
 }
 </script>
