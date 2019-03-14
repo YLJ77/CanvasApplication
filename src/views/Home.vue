@@ -20,7 +20,12 @@
       <option value='Circle'>circle</option>
       <option value='Line' selected>line</option>
       <option value='RoundedRect' selected>RoundedRect</option>
+      <option value='Polygon' selected>Polygon</option>
     </select>
+      <label for="sides">sides</label>
+      <input type="text" id="sides" v-model="sides">
+      <label for="startAngle">startAngle</label>
+      <input type="text" id="startAngle" v-model="startAngle">
       Guidewires:
       <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
       <label for="checkbox">填充:</label>
@@ -56,6 +61,8 @@ import { drawGrid, drawAxes, windowToCanvas, saveDrawingSurface, restoreDrawingS
 export default {
     data() {
         return {
+            sides: 3,
+            startAngle: 0,
             shape: 'Line',
             isFillColor: false,
             context: null,
@@ -78,9 +85,57 @@ export default {
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        this.drawCheckbox();
+        // this.drawCheckbox();
     },
     methods: {
+        getPolygonPoints({ centerX, centerY, radius }) {
+            let { sides, startAngle } = this;
+            startAngle = (Math.PI / 180) * (+startAngle);
+            let points = [],
+                angle = startAngle || 0;
+            function Point(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+            for (let i=0; i < sides; ++i) {
+                points.push(new Point(centerX + radius * Math.sin(angle),
+                    centerY - radius * Math.cos(angle)));
+                angle += 2*Math.PI/sides;
+            }
+            return points;
+        },
+        createPolygonPath({ centerX, centerY, radius }) {
+            let { context, sides } = this;
+            let points = this.getPolygonPoints({ centerX, centerY, radius });
+            context.beginPath();
+            context.moveTo(points[0].x, points[0].y);
+            for (let i=1; i < sides; ++i) {
+                context.lineTo(points[i].x, points[i].y);
+            }
+            context.closePath();
+        },
+        drawPolygon({ loc }) {
+            let {
+                rubberbandLine: {
+                    rubberbandRect: {
+                        width
+                    },
+                    mousedown: {
+                        x,
+                        y
+                    }
+                },
+                context,
+                isFillColor,
+                color
+            } = this;
+            this.createPolygonPath({centerX: x, centerY: y, radius: width });
+            context.stroke();
+            if (isFillColor) {
+                context.fillStyle = color;
+                context.fill();
+            }
+        },
         drawCheckbox() {
             let { context } = this;
             context.fillStyle = 'cornflowerblue';
