@@ -5,33 +5,41 @@
             @mousemove="onMouseMove"
             @mouseup="onMouseUp"
             id="canvas" width='600' height='600'>Canvas not supported</canvas>
-    <div id='controls'>
-      Stroke color: <select v-model="color">
-      <option value='red'>red</option>
-      <option value='green'>green</option>
-      <option value='blue'>blue</option>
-      <option value='orange'>orange</option>
-      <option value='cornflowerblue' selected>cornflowerblue</option>
-      <option value='goldenrod'>goldenrod</option>
-      <option value='navy'>navy</option>
-      <option value='purple'>purple</option>
-    </select>
-      shape: <select v-model="shape">
-      <option value='Circle'>circle</option>
-      <option value='Line' selected>line</option>
-      <option value='RoundedRect' selected>RoundedRect</option>
-      <option value='Polygon' selected>Polygon</option>
-    </select>
-      <label for="sides">sides</label>
-      <input type="text" id="sides" v-model="sides">
-      <label for="startAngle">startAngle</label>
-      <input type="text" id="startAngle" v-model="startAngle">
-      Guidewires:
-      <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
-      <label for="checkbox">填充:</label>
-      <input type="checkbox" id="checkbox" v-model="isFillColor">
-      <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
-    </div>
+    <ul id='controls'>
+      <li>
+        Stroke color: <select v-model="color">
+        <option value='red'>red</option>
+        <option value='green'>green</option>
+        <option value='blue'>blue</option>
+        <option value='orange'>orange</option>
+        <option value='cornflowerblue' selected>cornflowerblue</option>
+        <option value='goldenrod'>goldenrod</option>
+        <option value='navy'>navy</option>
+        <option value='purple'>purple</option>
+      </select>
+      </li>
+      <li>
+        shape: <select v-model="shape">
+        <option value='Circle'>circle</option>
+        <option value='Line' selected>line</option>
+        <option value='RoundedRect' selected>RoundedRect</option>
+        <option value='Polygon' selected>Polygon</option>
+      </select>
+      </li>
+      <li v-show="shape === 'Polygon'">
+        <label for="sides">sides</label>
+        <input type="text" id="sides" v-model="sides">
+        <label for="startAngle">startAngle</label>
+        <input type="text" id="startAngle" v-model="startAngle">
+      </li>
+      <li>
+        Guidewires:
+        <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
+        <label for="checkbox">填充:</label>
+        <input type="checkbox" id="checkbox" v-model="isFillColor">
+        <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -41,8 +49,14 @@
   }
   #controls {
     position: absolute;
-    left: 25px;
-    top: 25px;
+    left: -25px;
+    top: 0;
+      display: flex;
+    list-style: none;
+    align-items: center;
+    li {
+      margin-right: 10px;
+    }
   }
   #canvas {
     background: #ffffff;
@@ -56,11 +70,12 @@
 </style>
 
 <script>
-import { drawGrid, drawAxes, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
+import { drawGrid, Point, Polygon, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
 
 export default {
     data() {
         return {
+            polygons: [],
             sides: 3,
             startAngle: 0,
             shape: 'Line',
@@ -85,38 +100,13 @@ export default {
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        // this.drawCheckbox();
+        window.polygons = this.polygons;
     },
     methods: {
-        getPolygonPoints({ centerX, centerY, radius }) {
-            let { sides, startAngle } = this;
-            startAngle = (Math.PI / 180) * (+startAngle);
-            let points = [],
-                angle = startAngle || 0;
-            function Point(x, y) {
-                this.x = x;
-                this.y = y;
-            }
-            for (let i=0; i < sides; ++i) {
-                points.push(new Point(centerX + radius * Math.sin(angle),
-                    centerY - radius * Math.cos(angle)));
-                angle += 2*Math.PI/sides;
-            }
-            return points;
-        },
-        createPolygonPath({ centerX, centerY, radius }) {
-            let { context, sides } = this;
-            let points = this.getPolygonPoints({ centerX, centerY, radius });
-            context.beginPath();
-            context.moveTo(points[0].x, points[0].y);
-            for (let i=1; i < sides; ++i) {
-                context.lineTo(points[i].x, points[i].y);
-            }
-            context.closePath();
-        },
         drawPolygon({ loc }) {
             let {
                 rubberbandLine: {
+                    dragging,
                     rubberbandRect: {
                         width
                     },
@@ -126,15 +116,30 @@ export default {
                     }
                 },
                 context,
+                sides,
+                startAngle,
                 isFillColor,
-                color
+                color,
+                polygons
             } = this;
-            this.createPolygonPath({centerX: x, centerY: y, radius: width });
-            context.stroke();
+            let polygon = new Polygon({
+                centerX: x,
+                centerY: y,
+                radius: width,
+                sides,
+                startAngle,
+                strokeStyle: color,
+                fillStyle: color,
+                filled: isFillColor,
+                context
+            });
+            context.beginPath();
+            polygon.createPath();
+            polygon.stroke();
             if (isFillColor) {
-                context.fillStyle = color;
-                context.fill();
+                polygon.fill();
             }
+            if (!dragging) polygons.push(polygon);
         },
         drawCheckbox() {
             let { context } = this;
@@ -361,8 +366,8 @@ export default {
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
-            this.updateRubberband({ loc });
             rubberbandLine.dragging = false;
+            this.updateRubberband({ loc });
         }
     },
 }
