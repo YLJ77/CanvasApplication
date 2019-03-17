@@ -358,16 +358,16 @@ export default {
             let loc = windowToCanvas({ x, y, canvas });
             e.preventDefault(); // Prevent cursor change
             if (shape === 'Polygon' && editing) {
-                polygons.forEach( polygon => {
+                for (let polygon of polygons) {
                     polygon.createPath();
                     if (context.isPointInPath(loc.x, loc.y)) {
-                    this.startDragging(loc);
-                    this.selectedPolygon = polygon;
-                    this.draggingOffsetX = loc.x - polygon.x;
-                    this.draggingOffsetY = loc.y - polygon.y;
-                    return;
+                        this.startDragging(loc);
+                        this.selectedPolygon = polygon;
+                        this.draggingOffsetX = loc.x - polygon.x;
+                        this.draggingOffsetY = loc.y - polygon.y;
+                        break;
                     }
-                    });
+                }
             } else {
                 this.startDragging(loc);
             }
@@ -395,7 +395,7 @@ export default {
                 selectedPolygon.x = loc.x - draggingOffsetX;
                 selectedPolygon.y = loc.y - draggingOffsetY;
                 context.clearRect(0, 0, canvas.width, canvas.height);
-                drawGrid({ context, color: 'lightgray', stepX: 10, stepY: 10 });
+                drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
                 this.drawPolygons();
             }
             else {
