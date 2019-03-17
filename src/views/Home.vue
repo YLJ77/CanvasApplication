@@ -19,7 +19,7 @@
       </select>
       </li>
       <li>
-        shape: <select v-model="shape">
+        shape: <select v-model="shape" @change="editing=false">
         <option value='Circle'>circle</option>
         <option value='Line' selected>line</option>
         <option value='RoundedRect' selected>RoundedRect</option>
@@ -31,6 +31,8 @@
         <input type="text" id="sides" v-model="sides">
         <label for="startAngle">startAngle</label>
         <input type="text" id="startAngle" v-model="startAngle">
+        <label for="edit-checkbox">编辑:</label>
+        <input type="checkbox" id="edit-checkbox" v-model="editing">
       </li>
       <li>
         Guidewires:
@@ -86,15 +88,14 @@ export default {
             color: 'cornflowerblue',
             rubberbandLine: {
                 drawingSurfaceImageData: null,
-                mousedown: {},
-                rubberbandRect: {},
+                mousedown: {},  // x,y
+                rubberbandRect: {}, // width, height, left, top
                 dragging: false,
-            }
-        }
-    },
-    watch: {
-        isFillColor() {
-            console.log(this.isFillColor);
+            },
+            draggingOffsetX: null,
+            draggingOffsetY: null,
+            editing: false,
+            selectedPolygon: null
         }
     },
     mounted() {
@@ -102,7 +103,36 @@ export default {
         this.drawRubberbandLines();
         window.polygons = this.polygons;
     },
+    watch: {
+        editing() {
+            this.editing ? this.startEditing() : this.stopEditing();
+        }
+    },
     methods: {
+        startDragging(loc) {
+            let { rubberbandLine: { mousedown }, rubberbandLine, context } = this;
+                rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ context, canvas });
+                mousedown.x = loc.x;
+                mousedown.y = loc.y;
+                rubberbandLine.dragging = true;
+        },
+        startEditing() {
+            let { canvas } = this;
+            canvas.style.cursor = 'pointer';
+            this.editing = true;
+        },
+        stopEditing() {
+            let { canvas } = this;
+            canvas.style.cursor = 'crosshair';
+            this.editing = false;
+        },
+        drawPolygons() {
+            let { polygons } = this;
+                polygons.forEach( function (polygon) {
+                   polygon.stroke();
+                   polygon.filled && polygon.fill();
+            });
+        },
         drawPolygon({ loc }) {
             let {
                 rubberbandLine: {
@@ -266,7 +296,6 @@ export default {
             context.arc(mousedown.x, mousedown.y, radius, 0, Math.PI*2, false);
             context.strokeStyle = color;
             context.stroke();
-            console.warn(isFillColor);
             if (isFillColor) {
                 context.fillStyle = color;
                 context.fill();
@@ -320,15 +349,28 @@ export default {
                 rubberbandLine: {
                     mousedown
                 },
-                rubberbandLine
+                rubberbandLine,
+                editing,
+                shape,
+                polygons
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             e.preventDefault(); // Prevent cursor change
-            rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ context, canvas });
-            mousedown.x = loc.x;
-            mousedown.y = loc.y;
-            rubberbandLine.dragging = true;
+            if (shape === 'Polygon' && editing) {
+                polygons.forEach( polygon => {
+                    polygon.createPath();
+                    if (context.isPointInPath(loc.x, loc.y)) {
+                    this.startDragging(loc);
+                    this.selectedPolygon = polygon;
+                    this.draggingOffsetX = loc.x - polygon.x;
+                    this.draggingOffsetY = loc.y - polygon.y;
+                    return;
+                    }
+                    });
+            } else {
+                this.startDragging(loc);
+            }
         },
         onMouseMove(e) {
             let {
@@ -340,17 +382,30 @@ export default {
                     mousedown,
                     dragging,
                     drawingSurfaceImageData
-                }
+                },
+                editing,
+                selectedPolygon,
+                draggingOffsetX,
+                draggingOffsetY
             } = this;
-            if (dragging) {
-                let { clientX: x, clientY: y } = e;
-                e.preventDefault(); // Prevent selections
-                let loc = windowToCanvas({ x, y, canvas });
-                restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
-                this.updateRubberband({ loc });
-                if(guidewires) {
-                    let pos = shape === 'Line' ? loc : mousedown;
-                    this.drawGuidewires(pos);
+            let { clientX: x, clientY: y } = e;
+            e.preventDefault(); // Prevent selections
+            let loc = windowToCanvas({ x, y, canvas });
+            if (editing && dragging) {
+                selectedPolygon.x = loc.x - draggingOffsetX;
+                selectedPolygon.y = loc.y - draggingOffsetY;
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                drawGrid({ context, color: 'lightgray', stepX: 10, stepY: 10 });
+                this.drawPolygons();
+            }
+            else {
+                if (dragging) {
+                    restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+                    this.updateRubberband({ loc });
+                    if(guidewires) {
+                        let pos = shape === 'Line' ? loc : mousedown;
+                        this.drawGuidewires(pos);
+                    }
                 }
             }
         },
@@ -361,13 +416,16 @@ export default {
                 rubberbandLine,
                 rubberbandLine: {
                     drawingSurfaceImageData
-                }
+                },
+                editing
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
-            restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
             rubberbandLine.dragging = false;
+            if (!editing) {
+            restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
             this.updateRubberband({ loc });
+            }
         }
     },
 }
