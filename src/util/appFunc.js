@@ -1,82 +1,18 @@
-export class Point {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-    }
+function drawPoint({ x, y, radius = 2, context }) {
+    context.save();
+    context.beginPath();
+    context.fillStyle = 'red';
+    context.arc(x, y, radius, 0, 2 * Math.PI, false);
+    context.fill();
+    context.restore();
 }
-class Shape {
-    constructor({ context, strokeStyle, fillStyle, filled }) {
-        this.context = context;
-        this.strokeStyle = strokeStyle;
-        this.fillStyle = fillStyle;
-        this.filled = filled;
-    }
-    createPath() {}
-    stroke() {
-        let { context } = this;
-        context.save();
-        this.createPath(context);
-        context.strokeStyle = this.strokeStyle;
-        context.stroke();
-        context.restore();
-    }
-    fill() {
-        let { context } = this;
-        context.save();
-        this.createPath(context);
-        context.fillStyle = this.fillStyle;
-        context.fill();
-        context.restore();
-    }
-    move(x, y) {
-        this.x = x;
-        this.y = y;
-    }
-}
-export class Circle extends Shape{
-    constructor({ centerX, centerY, radius, context, filled, strokeStyle, fillStyle }) {
-        super({ context, strokeStyle, fillStyle, filled });
-        this.x = centerX;
-        this.y = centerY;
-        this.radius = radius;
-    }
-    createPath() {
-        let { context, x, y, radius } = this;
-        context.beginPath();
-        context.arc(x, y, radius, 0, Math.PI*2, false);
-        context.closePath();
-    }
-}
-export class Polygon extends Shape {
-    constructor({ centerX, centerY, radius,
-                    sides, startAngle, strokeStyle, fillStyle, filled, context }) {
-        super({ context, filled, fillStyle, strokeStyle });
-        this.x = centerX;
-        this.y = centerY;
-        this.radius = radius;
-        this.sides = sides;
-        this.startAngle = startAngle;
-    }
-    getPoints() {
-        let points = [],
-            angle = this.startAngle || 0;
-        for (var i=0; i < this.sides; ++i) {
-            points.push(new Point(this.x + this.radius * Math.sin(angle),
-                this.y - this.radius * Math.cos(angle)));
-            angle += 2*Math.PI/this.sides;
+export function drawBatchPoint({ points }) {
+    points.forEach((x, index) => {
+        if ((index < points.length - 1) && (index + 1) % 2 !== 0) {
+            let y = points[index + 1];
+            drawPoint({ x, y })
         }
-        return points;
-    }
-    createPath() {
-        let points = this.getPoints();
-        let { context } = this;
-        context.beginPath();
-        context.moveTo(points[0].x, points[0].y);
-        for (var i=1; i < this.sides; ++i) {
-            context.lineTo(points[i].x, points[i].y);
-        }
-        context.closePath();
-    }
+    });
 }
 export function restoreDrawingSurface({ context, imgData }) {
     context.putImageData(imgData, 0, 0);
@@ -94,6 +30,26 @@ export function windowToCanvas({x, y, canvas}) {
         y: y - bbox.top * (canvas.height / bbox.height) };
 }
 
+function drawHorizontalLine ({ y, context }) {
+    context.beginPath();
+    context.moveTo(0,y+0.5);
+    context.lineTo(context.canvas.width, y+0.5);
+    context.stroke();
+}
+function drawVerticalLine ({ x, context }) {
+    context.beginPath();
+    context.moveTo(x+0.5,0);
+    context.lineTo(x+0.5, context.canvas.height);
+    context.stroke();
+}
+export function drawGuidewires({ x, y, context }) {
+    context.save();
+    context.strokeStyle = 'rgba(0,0,230,0.4)';
+    context.lineWidth = 0.5;
+    drawVerticalLine({ x, context });
+    drawHorizontalLine({ y, context });
+    context.restore();
+}
 export function drawGrid({ context, color, stepx, stepy }) {
     context.save();
     context.strokeStyle = color;

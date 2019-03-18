@@ -73,7 +73,8 @@
 </style>
 
 <script>
-import { drawGrid, Circle, Point, Polygon, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
+import { drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
+import { Circle, RoundRect, Polygon, Line } from "../util/shape";
 
 export default {
     data() {
@@ -95,6 +96,8 @@ export default {
             },
             draggingOffsetX: null,
             draggingOffsetY: null,
+            draggingOffsetEndX: null,
+            draggingOffsetEndY: null,
             editing: false,
             selectedShape: null
         }
@@ -171,42 +174,6 @@ export default {
             }
             if (!dragging) shapes.push(polygon);
         },
-        drawCheckbox() {
-            let { context } = this;
-            context.fillStyle = 'cornflowerblue';
-            context.strokeStyle = 'yellow';
-            context.shadowColor = 'rgba(50,50,50,1.0)';
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
-            context.shadowBlur = 4;
-            context.lineWidth = 20;
-            context.lineCap = 'round';
-            context.beginPath();
-            context.moveTo(120.5, 130);
-            context.quadraticCurveTo(150.8, 130, 160.6, 150.5);
-            context.quadraticCurveTo(190, 250.0, 210.5, 160.5);
-            context.quadraticCurveTo(240, 100.5, 290, 70.5);
-            context.stroke();
-            let points = [120.5, 130, 150.8, 130, 160.6, 150.5, 190, 250.0, 210.5, 160.5, 240, 100.5, 290, 70.5];
-            this.drawBatchPoint({ points });
-        },
-        drawBatchPoint({ points }) {
-            points.forEach((x, index) => {
-                if ((index < points.length - 1) && (index + 1) % 2 !== 0) {
-                    let y = points[index + 1];
-                    this.drawPoint({ x, y })
-                }
-            });
-        },
-        drawPoint({ x, y, radius = 2 }) {
-            let { context } = this;
-            context.save();
-            context.beginPath();
-            context.fillStyle = 'red';
-            context.arc(x, y, radius, 0, 2 * Math.PI, false);
-            context.fill();
-            context.restore();
-        },
         getContext() {
             this.canvas = document.getElementById('canvas');
             this.context = this.canvas.getContext('2d');
@@ -240,38 +207,32 @@ export default {
             let { shape } = this;
             this[`draw${ shape }`]({ loc });
         },
-        roundedRect({ cornerRadius }) {
-            let { context,
+        drawRoundedRect({ cornerRadius = 10 } = {}) {
+            let {
+                context,
+                color,
+                isFillColor,
+                shapes,
                 rubberbandLine: {
+                    dragging,
                     rubberbandRect: { width, height },
                     mousedown: { x: cornerX, y: cornerY }
                 },
             } = this;
-            context.moveTo(cornerX + cornerRadius, cornerY);
-            context.arcTo(cornerX + width, cornerY,
-                cornerX + width, cornerY + height,
-                cornerRadius);
-            context.arcTo(cornerX + width, cornerY + height,
-                cornerX, cornerY + height,
-                cornerRadius);
-            context.arcTo(cornerX, cornerY + height,
-                cornerX, cornerY,
-                cornerRadius);
-            context.arcTo(cornerX, cornerY,
-                cornerX + cornerRadius, cornerY,
-                cornerRadius);
-
-        },
-        drawRoundedRect({ cornerRadius = 10 } = {}) {
-            let { context, color, isFillColor } = this;
-            context.beginPath();
-            this.roundedRect({ cornerRadius });
-            context.strokeStyle = color;
-            if (isFillColor) {
-                context.fillStyle = color;
-                context.fill();
-            }
-            context.stroke();
+            let roundRect = new RoundRect({
+                context,
+                filled: isFillColor,
+                strokeStyle: color,
+                fillStyle: color,
+                width,
+                height,
+                cornerX,
+                cornerY,
+                cornerRadius
+            });
+            roundRect.stroke();
+            if (isFillColor) roundRect.fill();
+            if (!dragging) shapes.push(roundRect);
         },
         drawCircle({ loc }) {
             let {
@@ -303,42 +264,23 @@ export default {
             let {
                 context,
                 rubberbandLine: {
-                    mousedown
+                    mousedown: {
+                        x: beginX,
+                        y: beginY
+                    },
+                    dragging
                 },
-                color
+                color,
+                shapes
             } = this;
-            context.strokeStyle = color;
-            context.beginPath();
-            context.moveTo(mousedown.x, mousedown.y);
-            context.lineTo(loc.x, loc.y);
-            context.stroke();
+            let { x: endX, y: endY } = loc;
+            let line = new Line({ context, strokeStyle: color, beginX, beginY, endX, endY, filled: false })
+            line.stroke();
+            if (!dragging) shapes.push(line);
         },
         updateRubberband({ loc }) {
             this.updateRubberbandRectangle({ loc });
             this.drawRubberbandShape({ loc });
-        },
-        drawHorizontalLine ({ y }) {
-            let { context } = this;
-            context.beginPath();
-            context.moveTo(0,y+0.5);
-            context.lineTo(context.canvas.width, y+0.5);
-            context.stroke();
-        },
-        drawVerticalLine ({ x }) {
-            let { context } = this;
-            context.beginPath();
-            context.moveTo(x+0.5,0);
-            context.lineTo(x+0.5, context.canvas.height);
-            context.stroke();
-        },
-        drawGuidewires({ x, y }) {
-            let { context } = this;
-            context.save();
-            context.strokeStyle = 'rgba(0,0,230,0.4)';
-            context.lineWidth = 0.5;
-            this.drawVerticalLine({ x });
-            this.drawHorizontalLine({ y });
-            context.restore();
         },
         onMouseDown(e) {
             let {
@@ -358,6 +300,10 @@ export default {
                         this.selectedShape = shape;
                         this.draggingOffsetX = loc.x - shape.x;
                         this.draggingOffsetY = loc.y - shape.y;
+                        if (this.selectedShape.type === 'Line') {
+                            this.draggingOffsetEndX = loc.x - shape.endX;
+                            this.draggingOffsetEndY = loc.y - shape.endY;
+                        }
                         break;
                     }
                 }
@@ -379,7 +325,9 @@ export default {
                 editing,
                 selectedShape,
                 draggingOffsetX,
-                draggingOffsetY
+                draggingOffsetY,
+                draggingOffsetEndX,
+                draggingOffsetEndY
             } = this;
             let { clientX: x, clientY: y } = e;
             e.preventDefault(); // Prevent selections
@@ -387,6 +335,10 @@ export default {
             if (editing && dragging) {
                 selectedShape.x = loc.x - draggingOffsetX;
                 selectedShape.y = loc.y - draggingOffsetY;
+                if (selectedShape.type === 'Line') {
+                    selectedShape.endX = loc.x - draggingOffsetEndX;
+                    selectedShape.endY = loc.y - draggingOffsetEndY;
+                }
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
                 this.drawShapes();
@@ -397,7 +349,7 @@ export default {
                     this.updateRubberband({ loc });
                     if(guidewires) {
                         let pos = shape === 'Line' ? loc : mousedown;
-                        this.drawGuidewires(pos);
+                        drawGuidewires({ context, x: pos.x, y: pos.y });
                     }
                 }
             }
