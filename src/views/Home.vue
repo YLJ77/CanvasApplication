@@ -31,11 +31,11 @@
         <input type="text" id="sides" v-model="sides">
         <label for="startAngle">startAngle</label>
         <input type="text" id="startAngle" v-model="startAngle">
-        <label for="edit-checkbox">编辑:</label>
-        <input type="checkbox" id="edit-checkbox" v-model="editing">
       </li>
       <li>
-        Guidewires:
+        <label for="edit-checkbox">编辑:</label>
+        <input type="checkbox" id="edit-checkbox" v-model="editing">
+        <label for="guidewireCheckbox">Guidewires:</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
         <input type="checkbox" id="checkbox" v-model="isFillColor">
@@ -54,6 +54,7 @@
     left: -25px;
     top: 0;
       display: flex;
+      flex-wrap: wrap;
     list-style: none;
     align-items: center;
     li {
@@ -72,12 +73,12 @@
 </style>
 
 <script>
-import { drawGrid, Point, Polygon, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
+import { drawGrid, Circle, Point, Polygon, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
 
 export default {
     data() {
         return {
-            polygons: [],
+            shapes: [],
             sides: 3,
             startAngle: 0,
             shape: 'Line',
@@ -95,13 +96,13 @@ export default {
             draggingOffsetX: null,
             draggingOffsetY: null,
             editing: false,
-            selectedPolygon: null
+            selectedShape: null
         }
     },
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        window.polygons = this.polygons;
+        window.shapes = this.shapes;
     },
     watch: {
         editing() {
@@ -126,11 +127,11 @@ export default {
             canvas.style.cursor = 'crosshair';
             this.editing = false;
         },
-        drawPolygons() {
-            let { polygons } = this;
-                polygons.forEach( function (polygon) {
-                   polygon.stroke();
-                   polygon.filled && polygon.fill();
+        drawShapes() {
+            let { shapes } = this;
+                shapes.forEach( shape => {
+                   shape.stroke();
+                   shape.filled && shape.fill();
             });
         },
         drawPolygon({ loc }) {
@@ -150,7 +151,7 @@ export default {
                 startAngle,
                 isFillColor,
                 color,
-                polygons
+                shapes
             } = this;
             let polygon = new Polygon({
                 centerX: x,
@@ -164,12 +165,11 @@ export default {
                 context
             });
             context.beginPath();
-            polygon.createPath();
             polygon.stroke();
             if (isFillColor) {
                 polygon.fill();
             }
-            if (!dragging) polygons.push(polygon);
+            if (!dragging) shapes.push(polygon);
         },
         drawCheckbox() {
             let { context } = this;
@@ -276,30 +276,28 @@ export default {
         drawCircle({ loc }) {
             let {
                 context,
-                guidewires,
                 rubberbandLine: {
-                    rubberbandRect,
-                    mousedown
+                    dragging,
+                    rubberbandRect: { width, height },
+                    mousedown: {
+                        x,
+                        y
+                    }
                 },
                 color,
-                isFillColor
+                isFillColor,
+                shapes
             } = this;
-            let angle,
-                radius;
-            if (mousedown.y === loc.y) {
-                radius = Math.abs(loc.x - mousedown.x);
+            let radius;
+            if (y === loc.y) {
+                radius = Math.abs(loc.x - x);
             } else {
-                angle = Math.atan(rubberbandRect.height/rubberbandRect.width);
-                radius = rubberbandRect.height / Math.sin(angle);
+                radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
             }
-            context.beginPath();
-            context.arc(mousedown.x, mousedown.y, radius, 0, Math.PI*2, false);
-            context.strokeStyle = color;
-            context.stroke();
-            if (isFillColor) {
-                context.fillStyle = color;
-                context.fill();
-            }
+            let circle = new Circle({ centerX: x, centerY: y, radius, context, filled: isFillColor, strokeStyle: color, fillStyle: color })
+            circle.stroke();
+            if (isFillColor) circle.fill();
+            if (!dragging) shapes.push(circle);
         },
         drawLine({ loc }) {
             let {
@@ -346,25 +344,20 @@ export default {
             let {
                 context,
                 canvas,
-                rubberbandLine: {
-                    mousedown
-                },
-                rubberbandLine,
                 editing,
-                shape,
-                polygons
+                shapes
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             e.preventDefault(); // Prevent cursor change
-            if (shape === 'Polygon' && editing) {
-                for (let polygon of polygons) {
-                    polygon.createPath();
+            if (editing) {
+                for (let shape of shapes) {
+                    shape.createPath();
                     if (context.isPointInPath(loc.x, loc.y)) {
                         this.startDragging(loc);
-                        this.selectedPolygon = polygon;
-                        this.draggingOffsetX = loc.x - polygon.x;
-                        this.draggingOffsetY = loc.y - polygon.y;
+                        this.selectedShape = shape;
+                        this.draggingOffsetX = loc.x - shape.x;
+                        this.draggingOffsetY = loc.y - shape.y;
                         break;
                     }
                 }
@@ -384,7 +377,7 @@ export default {
                     drawingSurfaceImageData
                 },
                 editing,
-                selectedPolygon,
+                selectedShape,
                 draggingOffsetX,
                 draggingOffsetY
             } = this;
@@ -392,11 +385,11 @@ export default {
             e.preventDefault(); // Prevent selections
             let loc = windowToCanvas({ x, y, canvas });
             if (editing && dragging) {
-                selectedPolygon.x = loc.x - draggingOffsetX;
-                selectedPolygon.y = loc.y - draggingOffsetY;
+                selectedShape.x = loc.x - draggingOffsetX;
+                selectedShape.y = loc.y - draggingOffsetY;
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
-                this.drawPolygons();
+                this.drawShapes();
             }
             else {
                 if (dragging) {

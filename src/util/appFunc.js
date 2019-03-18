@@ -4,18 +4,58 @@ export class Point {
         this.y = y;
     }
 }
-export class Polygon {
+class Shape {
+    constructor({ context, strokeStyle, fillStyle, filled }) {
+        this.context = context;
+        this.strokeStyle = strokeStyle;
+        this.fillStyle = fillStyle;
+        this.filled = filled;
+    }
+    createPath() {}
+    stroke() {
+        let { context } = this;
+        context.save();
+        this.createPath(context);
+        context.strokeStyle = this.strokeStyle;
+        context.stroke();
+        context.restore();
+    }
+    fill() {
+        let { context } = this;
+        context.save();
+        this.createPath(context);
+        context.fillStyle = this.fillStyle;
+        context.fill();
+        context.restore();
+    }
+    move(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+}
+export class Circle extends Shape{
+    constructor({ centerX, centerY, radius, context, filled, strokeStyle, fillStyle }) {
+        super({ context, strokeStyle, fillStyle, filled });
+        this.x = centerX;
+        this.y = centerY;
+        this.radius = radius;
+    }
+    createPath() {
+        let { context, x, y, radius } = this;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI*2, false);
+        context.closePath();
+    }
+}
+export class Polygon extends Shape {
     constructor({ centerX, centerY, radius,
                     sides, startAngle, strokeStyle, fillStyle, filled, context }) {
+        super({ context, filled, fillStyle, strokeStyle });
         this.x = centerX;
         this.y = centerY;
         this.radius = radius;
         this.sides = sides;
         this.startAngle = startAngle;
-        this.strokeStyle = strokeStyle;
-        this.fillStyle = fillStyle;
-        this.filled = filled;
-        this.context = context;
     }
     getPoints() {
         let points = [],
@@ -36,26 +76,6 @@ export class Polygon {
             context.lineTo(points[i].x, points[i].y);
         }
         context.closePath();
-    }
-    stroke() {
-        let { context } = this;
-        context.save();
-        this.createPath(context);
-        context.strokeStyle = this.strokeStyle;
-        context.stroke();
-        context.restore();
-    }
-    fill() {
-        let { context } = this;
-        context.save();
-        this.createPath(context);
-        context.fillStyle = this.fillStyle;
-        context.fill();
-        context.restore();
-    }
-    move(x, y) {
-        this.x = x;
-        this.y = y;
     }
 }
 export function restoreDrawingSurface({ context, imgData }) {
