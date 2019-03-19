@@ -1,4 +1,4 @@
-function drawPoint({ x, y, radius = 2, context }) {
+function drawPoint({ x, y, radius = 5, context }) {
     context.save();
     context.beginPath();
     context.fillStyle = 'red';
@@ -6,11 +6,11 @@ function drawPoint({ x, y, radius = 2, context }) {
     context.fill();
     context.restore();
 }
-export function drawBatchPoint({ points }) {
+export function drawBatchPoint({ points, context }) {
     points.forEach((x, index) => {
         if ((index < points.length - 1) && (index + 1) % 2 !== 0) {
             let y = points[index + 1];
-            drawPoint({ x, y })
+            drawPoint({ x, y, context });
         }
     });
 }

@@ -7,7 +7,8 @@
             id="canvas" width='600' height='600'>Canvas not supported</canvas>
     <ul id='controls'>
       <li>
-        Stroke color: <select v-model="color">
+        <label for="color">颜色</label>
+        <select id="color" v-model="color">
         <option value='red'>red</option>
         <option value='green'>green</option>
         <option value='blue'>blue</option>
@@ -19,27 +20,29 @@
       </select>
       </li>
       <li>
-        shape: <select v-model="shape" @change="editing=false">
+        <label for="shape">形状</label>
+        <select id="shape" v-model="shape" @change="editing=false">
         <option value='Circle'>circle</option>
         <option value='Line' selected>line</option>
         <option value='RoundedRect' selected>RoundedRect</option>
         <option value='Polygon' selected>Polygon</option>
+        <option value='BezierCurve' selected>BezierCurve</option>
       </select>
       </li>
       <li v-show="shape === 'Polygon'">
-        <label for="sides">sides</label>
+        <label for="sides">边数</label>
         <input type="text" id="sides" v-model="sides">
-        <label for="startAngle">startAngle</label>
+        <label for="startAngle">开始角度</label>
         <input type="text" id="startAngle" v-model="startAngle">
       </li>
       <li>
-        <label for="edit-checkbox">编辑:</label>
+        <label for="edit-checkbox">编辑</label>
         <input type="checkbox" id="edit-checkbox" v-model="editing">
-        <label for="guidewireCheckbox">Guidewires:</label>
+        <label for="guidewireCheckbox">导线</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
         <input type="checkbox" id="checkbox" v-model="isFillColor">
-        <input @click="erase" id='eraseAllButton' type='button' value='Erase all'/>
+        <input @click="erase" id='eraseAllButton' type='button' value='擦除所有'/>
       </li>
     </ul>
   </div>
@@ -74,7 +77,7 @@
 
 <script>
 import { drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
-import { Circle, RoundRect, Polygon, Line } from "../util/shape";
+import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
 
 export default {
     data() {
@@ -99,7 +102,10 @@ export default {
             draggingOffsetEndX: null,
             draggingOffsetEndY: null,
             editing: false,
-            selectedShape: null
+            selectedShape: null,
+            draggingPoint: false, // End- or control point user is dragging
+            endPoints: [ {}, {} ], // Endpoint locations (x, y)
+            controlPoints: [ {}, {} ], // Control point locations (x, y)
         }
     },
     mounted() {
@@ -133,9 +139,26 @@ export default {
         drawShapes() {
             let { shapes } = this;
                 shapes.forEach( shape => {
-                   shape.stroke();
-                   shape.filled && shape.fill();
+                   shape.draw();
             });
+        },
+        drawBezierCurve() {
+            this.updateEndAndControlPoints();
+            let { context, shapes, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
+            let curve = new BezierCurve({ context, strokeStyle: color, fillStyle: color, endPoints, controlPoints });
+            curve.draw();
+            if (!dragging) shapes.push(curve);
+        },
+        updateEndAndControlPoints() {
+            let { endPoints, controlPoints, rubberbandLine: { rubberbandRect } } = this;
+            endPoints[0].x = rubberbandRect.left;
+            endPoints[0].y = rubberbandRect.top;
+            endPoints[1].x = rubberbandRect.left + rubberbandRect.width;
+            endPoints[1].y = rubberbandRect.top + rubberbandRect.height;
+            controlPoints[0].x = rubberbandRect.left;
+            controlPoints[0].y = rubberbandRect.top + rubberbandRect.height;
+            controlPoints[1].x = rubberbandRect.left + rubberbandRect.width;
+            controlPoints[1].y = rubberbandRect.top;
         },
         drawPolygon({ loc }) {
             let {
@@ -167,11 +190,7 @@ export default {
                 filled: isFillColor,
                 context
             });
-            context.beginPath();
-            polygon.stroke();
-            if (isFillColor) {
-                polygon.fill();
-            }
+            polygon.draw();
             if (!dragging) shapes.push(polygon);
         },
         getContext() {
@@ -230,8 +249,7 @@ export default {
                 cornerY,
                 cornerRadius
             });
-            roundRect.stroke();
-            if (isFillColor) roundRect.fill();
+            roundRect.draw();
             if (!dragging) shapes.push(roundRect);
         },
         drawCircle({ loc }) {
@@ -256,8 +274,7 @@ export default {
                 radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
             }
             let circle = new Circle({ centerX: x, centerY: y, radius, context, filled: isFillColor, strokeStyle: color, fillStyle: color })
-            circle.stroke();
-            if (isFillColor) circle.fill();
+            circle.draw();
             if (!dragging) shapes.push(circle);
         },
         drawLine({ loc }) {
@@ -275,7 +292,7 @@ export default {
             } = this;
             let { x: endX, y: endY } = loc;
             let line = new Line({ context, strokeStyle: color, beginX, beginY, endX, endY, filled: false })
-            line.stroke();
+            line.draw();
             if (!dragging) shapes.push(line);
         },
         updateRubberband({ loc }) {
@@ -296,13 +313,22 @@ export default {
                 for (let shape of shapes) {
                     shape.createPath();
                     if (context.isPointInPath(loc.x, loc.y)) {
+                        let { type } = shape;
                         this.startDragging(loc);
                         this.selectedShape = shape;
-                        this.draggingOffsetX = loc.x - shape.x;
-                        this.draggingOffsetY = loc.y - shape.y;
-                        if (this.selectedShape.type === 'Line') {
-                            this.draggingOffsetEndX = loc.x - shape.endX;
-                            this.draggingOffsetEndY = loc.y - shape.endY;
+                        switch (type) {
+                            case 'Line':
+                                this.draggingOffsetX = loc.x - shape.x;
+                                this.draggingOffsetY = loc.y - shape.y;
+                                this.draggingOffsetEndX = loc.x - shape.endX;
+                                this.draggingOffsetEndY = loc.y - shape.endY;
+                                break;
+                            case 'BezierCurve':
+                                shape.getDraggingPoint(loc);
+                                break;
+                            default:
+                                this.draggingOffsetX = loc.x - shape.x;
+                                this.draggingOffsetY = loc.y - shape.y;
                         }
                         break;
                     }
@@ -333,11 +359,16 @@ export default {
             e.preventDefault(); // Prevent selections
             let loc = windowToCanvas({ x, y, canvas });
             if (editing && dragging) {
-                selectedShape.x = loc.x - draggingOffsetX;
-                selectedShape.y = loc.y - draggingOffsetY;
-                if (selectedShape.type === 'Line') {
-                    selectedShape.endX = loc.x - draggingOffsetEndX;
-                    selectedShape.endY = loc.y - draggingOffsetEndY;
+                switch (selectedShape.type) {
+                    case 'Line':
+                        selectedShape.endX = loc.x - draggingOffsetEndX;
+                        selectedShape.endY = loc.y - draggingOffsetEndY;
+                        break;
+                    case 'BezierCurve':
+                        selectedShape.draggingPoint && selectedShape.updateDraggingPoint(loc);
+                    default:
+                        selectedShape.x = loc.x - draggingOffsetX;
+                        selectedShape.y = loc.y - draggingOffsetY;
                 }
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
