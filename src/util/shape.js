@@ -35,8 +35,8 @@ class Shape {
 export class BezierCurve extends Shape {
     constructor({ context, pointRadius = 5, fillStyle, strokeStyle, endPoints, controlPoints }) {
         super({ context, strokeStyle, fillStyle, filled: false });
-        this.endPoints = endPoints;
-        this.controlPoints = controlPoints;
+        this.endPoints = JSON.parse(JSON.stringify(endPoints));
+        this.controlPoints = JSON.parse(JSON.stringify(controlPoints));
         this.draggingPoint = null;
         this.pointRadius = pointRadius;
     }

@@ -361,11 +361,14 @@ export default {
             if (editing && dragging) {
                 switch (selectedShape.type) {
                     case 'Line':
+                        selectedShape.x = loc.x - draggingOffsetX;
+                        selectedShape.y = loc.y - draggingOffsetY;
                         selectedShape.endX = loc.x - draggingOffsetEndX;
                         selectedShape.endY = loc.y - draggingOffsetEndY;
                         break;
                     case 'BezierCurve':
                         selectedShape.draggingPoint && selectedShape.updateDraggingPoint(loc);
+                        break;
                     default:
                         selectedShape.x = loc.x - draggingOffsetX;
                         selectedShape.y = loc.y - draggingOffsetY;
