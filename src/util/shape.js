@@ -1,5 +1,3 @@
-import { drawBatchPoint } from "./appFunc";
-
 export class Point {
     constructor(x, y) {
         this.x = x;
@@ -13,6 +11,20 @@ class Shape {
         this.fillStyle = fillStyle;
         this.filled = filled;
         this.type = new.target.name;
+        this.offsets = null;
+    }
+    cacheOffset(loc) {
+        let { x, y } = this;
+        this.offsets = [];
+        let offsetX = loc.x -x;
+        let offsetY = loc.y - y;
+        this.offsets.push({ offsetX, offsetY });
+    }
+    updatePoints(loc) {
+        this.offsets.forEach(offset => {
+            this.x = loc.x - offset.offsetX;
+            this.y = loc.y - offset.offsetY;
+        })
     }
     createPath() {}
     draw() {
@@ -76,8 +88,53 @@ export class BezierCurve extends Shape {
             endPoints[1].x, endPoints[1].y);
         this.stroke();
     }
-    createPath() {
+    cacheOffset(loc) {
+        let { endPoints, controlPoints } = this;
+        this.offsets = [];
+        endPoints.concat(controlPoints).forEach(point => {
+            let offsetX = loc.x -point.x;
+            let offsetY = loc.y - point.y;
+            this.offsets.push({ offsetX, offsetY });
+        });
+    }
+    updatePoints(loc) {
+        let { endPoints, controlPoints, offsets } = this;
+        endPoints.concat(controlPoints).forEach((point, index) => {
+            point.x = loc.x - offsets[index].offsetX;
+            point.y = loc.y - offsets[index].offsetY;
+        });
+    }
+    createRectPath() {
+        let { x, y, width, height } = this.getRectInfo();
+        let { context } = this;
+        context.beginPath();
+        context.rect(x, y, width, height);
+        context.closePath();
+    }
+    getRectInfo() {
+        let minX, minY, maxX, maxY;
+        let { endPoints, controlPoints } = this;
+        minX = minY = 100000;
+        maxX = maxY = 0;
+        endPoints.concat(controlPoints).forEach( point => {
+            let { x, y } = point;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+        });
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        }
+    }
+    createEditPath() {
         this.createPointPath();
+    }
+    createPath() {
+        this.createRectPath();
     }
     draw() {
         this.createPointPath({ isDraw: true });
@@ -117,6 +174,19 @@ export class Line extends Shape {
         context.beginPath();
         context.rect(Math.min(x, endX), Math.min(y, endY), Math.abs(x - endX), Math.abs(y - endY));
         context.closePath();
+    }
+    cacheOffset(loc) {
+        let { x, y, endX, endY } = this;
+        this.offsets = [];
+        this.offsets.push({ offsetX: loc.x - x, offsetY: loc.y - y });
+        this.offsets.push({ offsetX: loc.x - endX, offsetY: loc.y - endY });
+    }
+    updatePoints(loc) {
+        let { offsets } = this;
+        this.x = loc.x - offsets[0].offsetX;
+        this.y = loc.y - offsets[0].offsetY;
+        this.endX = loc.x - offsets[1].offsetX;
+        this.endY = loc.y - offsets[1].offsetY;
     }
     draw() {
         let { x, y, endX, endY, context, strokeStyle } = this;

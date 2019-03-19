@@ -21,7 +21,7 @@
       </li>
       <li>
         <label for="shape">形状</label>
-        <select id="shape" v-model="shape" @change="editing=false">
+        <select id="shape" v-model="shape" @change="dragMode=false">
         <option value='Circle'>circle</option>
         <option value='Line' selected>line</option>
         <option value='RoundedRect' selected>RoundedRect</option>
@@ -36,8 +36,12 @@
         <input type="text" id="startAngle" v-model="startAngle">
       </li>
       <li>
-        <label for="edit-checkbox">编辑</label>
-        <input type="checkbox" id="edit-checkbox" v-model="editing">
+        <label for="normal-radio">normal</label>
+        <input type="radio" id="normal-radio" v-model="mode" value="normal">
+        <label for="drag-radio">拖拽</label>
+        <input type="radio" id="drag-radio" v-model="mode" value="drag">
+        <label for="edit-radio">编辑</label>
+        <input type="radio" id="edit-radio" v-model="mode" value="edit">
         <label for="guidewireCheckbox">导线</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
@@ -97,11 +101,7 @@ export default {
                 rubberbandRect: {}, // width, height, left, top
                 dragging: false,
             },
-            draggingOffsetX: null,
-            draggingOffsetY: null,
-            draggingOffsetEndX: null,
-            draggingOffsetEndY: null,
-            editing: false,
+            mode: 'normal',
             selectedShape: null,
             draggingPoint: false, // End- or control point user is dragging
             endPoints: [ {}, {} ], // Endpoint locations (x, y)
@@ -114,8 +114,8 @@ export default {
         window.shapes = this.shapes;
     },
     watch: {
-        editing() {
-            this.editing ? this.startEditing() : this.stopEditing();
+        mode() {
+            this.mode === 'drag' || this.mode === 'edit' ? this.startEditing() : this.stopEditing();
         }
     },
     methods: {
@@ -129,12 +129,12 @@ export default {
         startEditing() {
             let { canvas } = this;
             canvas.style.cursor = 'pointer';
-            this.editing = true;
+            // this.mode = 'drag';
         },
         stopEditing() {
             let { canvas } = this;
             canvas.style.cursor = 'crosshair';
-            this.editing = false;
+            // this.mode = 'normal';
         },
         drawShapes() {
             let { shapes } = this;
@@ -144,7 +144,7 @@ export default {
         },
         drawBezierCurve() {
             this.updateEndAndControlPoints();
-            let { context, shapes, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
+            let { context, shapes, mode, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
             let curve = new BezierCurve({ context, strokeStyle: color, fillStyle: color, endPoints, controlPoints });
             curve.draw();
             if (!dragging) shapes.push(curve);
@@ -299,42 +299,50 @@ export default {
             this.updateRubberbandRectangle({ loc });
             this.drawRubberbandShape({ loc });
         },
+        onMouseDownEdit({ loc }) {
+            let { shapes, context } = this;
+            for (let shape of shapes) {
+                shape.createEditPath();
+                if (context.isPointInPath(loc.x, loc.y)) {
+                    this.startDragging(loc);
+                    this.selectedShape = shape;
+                    shape.getDraggingPoint(loc);
+                    shape.cacheOffset(loc);
+                    break;
+                }
+            }
+        },
+        onMouseDownDrag({ loc }) {
+            let { shapes, context } = this;
+            for (let shape of shapes) {
+                shape.createPath();
+                if (context.isPointInPath(loc.x, loc.y)) {
+                    let { type } = shape;
+                    this.startDragging(loc);
+                    this.selectedShape = shape;
+                    shape.cacheOffset(loc);
+                    break;
+                }
+            }
+        },
         onMouseDown(e) {
             let {
-                context,
                 canvas,
-                editing,
-                shapes
+                mode,
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             e.preventDefault(); // Prevent cursor change
-            if (editing) {
-                for (let shape of shapes) {
-                    shape.createPath();
-                    if (context.isPointInPath(loc.x, loc.y)) {
-                        let { type } = shape;
-                        this.startDragging(loc);
-                        this.selectedShape = shape;
-                        switch (type) {
-                            case 'Line':
-                                this.draggingOffsetX = loc.x - shape.x;
-                                this.draggingOffsetY = loc.y - shape.y;
-                                this.draggingOffsetEndX = loc.x - shape.endX;
-                                this.draggingOffsetEndY = loc.y - shape.endY;
-                                break;
-                            case 'BezierCurve':
-                                shape.getDraggingPoint(loc);
-                                break;
-                            default:
-                                this.draggingOffsetX = loc.x - shape.x;
-                                this.draggingOffsetY = loc.y - shape.y;
-                        }
-                        break;
-                    }
-                }
-            } else {
-                this.startDragging(loc);
+            switch (mode) {
+                case 'drag':
+                    this.onMouseDownDrag({ loc });
+                    break;
+                case 'edit':
+                    this.onMouseDownEdit({ loc });
+                    break;
+                case 'normal':
+                    this.startDragging(loc);
+                    break;
             }
         },
         onMouseMove(e) {
@@ -348,43 +356,33 @@ export default {
                     dragging,
                     drawingSurfaceImageData
                 },
-                editing,
+                mode,
                 selectedShape,
-                draggingOffsetX,
-                draggingOffsetY,
-                draggingOffsetEndX,
-                draggingOffsetEndY
             } = this;
             let { clientX: x, clientY: y } = e;
             e.preventDefault(); // Prevent selections
             let loc = windowToCanvas({ x, y, canvas });
-            if (editing && dragging) {
-                switch (selectedShape.type) {
-                    case 'Line':
-                        selectedShape.x = loc.x - draggingOffsetX;
-                        selectedShape.y = loc.y - draggingOffsetY;
-                        selectedShape.endX = loc.x - draggingOffsetEndX;
-                        selectedShape.endY = loc.y - draggingOffsetEndY;
+            if (dragging) {
+                switch (mode) {
+                    case 'drag':
+                        selectedShape.updatePoints(loc);
                         break;
-                    case 'BezierCurve':
-                        selectedShape.draggingPoint && selectedShape.updateDraggingPoint(loc);
+                    case 'edit':
+                        selectedShape.updateDraggingPoint(loc);
                         break;
-                    default:
-                        selectedShape.x = loc.x - draggingOffsetX;
-                        selectedShape.y = loc.y - draggingOffsetY;
+                    case 'normal':
+                        restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+                        this.updateRubberband({ loc });
+                        if(guidewires) {
+                            let pos = shape === 'Line' ? loc : mousedown;
+                            drawGuidewires({ context, x: pos.x, y: pos.y });
+                        }
+                        break;
                 }
-                context.clearRect(0, 0, canvas.width, canvas.height);
-                drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
-                this.drawShapes();
-            }
-            else {
-                if (dragging) {
-                    restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
-                    this.updateRubberband({ loc });
-                    if(guidewires) {
-                        let pos = shape === 'Line' ? loc : mousedown;
-                        drawGuidewires({ context, x: pos.x, y: pos.y });
-                    }
+                if (mode === 'drag' || mode === 'edit') {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
+                    this.drawShapes();
                 }
             }
         },
@@ -396,12 +394,12 @@ export default {
                 rubberbandLine: {
                     drawingSurfaceImageData
                 },
-                editing
+                mode
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             rubberbandLine.dragging = false;
-            if (!editing) {
+            if (mode !== 'drag' && mode !== 'edit') {
             restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
             this.updateRubberband({ loc });
             }
