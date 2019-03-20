@@ -36,12 +36,14 @@
         <input type="text" id="startAngle" v-model="startAngle">
       </li>
       <li>
-        <label for="normal-radio">normal</label>
+        <label for="normal-radio">画图</label>
         <input type="radio" id="normal-radio" v-model="mode" value="normal">
         <label for="drag-radio">拖拽</label>
         <input type="radio" id="drag-radio" v-model="mode" value="drag">
-        <label for="edit-radio">编辑</label>
-        <input type="radio" id="edit-radio" v-model="mode" value="edit">
+        <template v-if="shape === 'BezierCurve'">
+          <label for="edit-radio">编辑</label>
+          <input type="radio" id="edit-radio" v-model="mode" value="edit">
+        </template>
         <label for="guidewireCheckbox">导线</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
@@ -65,6 +67,8 @@
     list-style: none;
     align-items: center;
     li {
+      display: flex;
+      align-items: center;
       margin-right: 10px;
     }
   }
