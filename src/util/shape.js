@@ -5,8 +5,8 @@ export class Point {
     }
 }
 class Shape {
-    constructor({ context, strokeStyle, fillStyle, filled }) {
-        this.context = context;
+    constructor({ ctx, strokeStyle, fillStyle, filled }) {
+        this.ctx = ctx;
         this.strokeStyle = strokeStyle;
         this.fillStyle = fillStyle;
         this.filled = filled;
@@ -28,16 +28,16 @@ class Shape {
     }
     createPath() {}
     draw() {
-        let { context, filled } = this;
-        context.save();
-        this.createPath(context);
-        context.strokeStyle = this.strokeStyle;
-        context.stroke();
+        let { ctx, filled } = this;
+        ctx.save();
+        this.createPath(ctx);
+        ctx.strokeStyle = this.strokeStyle;
+        ctx.stroke();
         if (filled) {
-            context.fillStyle = this.fillStyle;
-            context.fill();
+            ctx.fillStyle = this.fillStyle;
+            ctx.fill();
         }
-        context.restore();
+        ctx.restore();
     }
     move(x, y) {
         this.x = x;
@@ -45,45 +45,45 @@ class Shape {
     }
 }
 export class BezierCurve extends Shape {
-    constructor({ context, pointRadius = 5, fillStyle, strokeStyle, endPoints, controlPoints }) {
-        super({ context, strokeStyle, fillStyle, filled: false });
+    constructor({ ctx, pointRadius = 5, fillStyle, strokeStyle, endPoints, controlPoints }) {
+        super({ ctx, strokeStyle, fillStyle, filled: false });
         this.endPoints = JSON.parse(JSON.stringify(endPoints));
         this.controlPoints = JSON.parse(JSON.stringify(controlPoints));
         this.draggingPoint = null;
         this.pointRadius = pointRadius;
     }
     stroke({ filled = false } = {}) {
-        let { context, strokeStyle, fillStyle } = this;
-        context.save();
-        context.strokeStyle = strokeStyle;
-        context.stroke();
+        let { ctx, strokeStyle, fillStyle } = this;
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.stroke();
         if (filled) {
-            context.fillStyle = fillStyle;
-            context.fill();
+            ctx.fillStyle = fillStyle;
+            ctx.fill();
         }
-        context.restore();
+        ctx.restore();
     }
     createPointPath({ isDraw = false } = {}) {
-        let { endPoints, controlPoints, context, pointRadius } = this;
-        !isDraw && context.beginPath();
+        let { endPoints, controlPoints, ctx, pointRadius } = this;
+        !isDraw && ctx.beginPath();
         endPoints.concat(controlPoints)
             .forEach(point => {
                 let { x, y } = point;
                 if (isDraw) {
-                    context.beginPath();
-                    context.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
-                    context.closePath();
+                    ctx.beginPath();
+                    ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+                    ctx.closePath();
                     this.stroke({ filled: true });
                 } else {
-                    context.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+                    ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
                 }
             });
-        !isDraw && context.closePath();
+        !isDraw && ctx.closePath();
     }
     drawCurve() {
-        let { endPoints, controlPoints, context } = this;
-        context.moveTo(endPoints[0].x, endPoints[0].y);
-        context.bezierCurveTo(controlPoints[0].x, controlPoints[0].y,
+        let { endPoints, controlPoints, ctx } = this;
+        ctx.moveTo(endPoints[0].x, endPoints[0].y);
+        ctx.bezierCurveTo(controlPoints[0].x, controlPoints[0].y,
             controlPoints[1].x, controlPoints[1].y,
             endPoints[1].x, endPoints[1].y);
         this.stroke();
@@ -106,10 +106,10 @@ export class BezierCurve extends Shape {
     }
     createRectPath() {
         let { x, y, width, height } = this.getRectInfo();
-        let { context } = this;
-        context.beginPath();
-        context.rect(x, y, width, height);
-        context.closePath();
+        let { ctx } = this;
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.closePath();
     }
     getRectInfo() {
         let minX, minY, maxX, maxY;
@@ -141,15 +141,15 @@ export class BezierCurve extends Shape {
         this.drawCurve();
     }
     getDraggingPoint(loc) {
-        let { endPoints, controlPoints, context } = this;
+        let { endPoints, controlPoints, ctx } = this;
         let radius = 5;
         let points = controlPoints.concat(endPoints);
         for (let point of points) {
-            context.beginPath();
-            context.arc(point.x, point.y,
+            ctx.beginPath();
+            ctx.arc(point.x, point.y,
                 radius, 0, Math.PI * 2, false);
-            context.closePath();
-            if (context.isPointInPath(loc.x, loc.y)) {
+            ctx.closePath();
+            if (ctx.isPointInPath(loc.x, loc.y)) {
                 this.draggingPoint = point;
                 break;
             }
@@ -162,18 +162,18 @@ export class BezierCurve extends Shape {
     }
 }
 export class Line extends Shape {
-    constructor({ context, filled, strokeStyle, beginX, beginY, endX, endY }) {
-        super({ context, strokeStyle, filled })
+    constructor({ ctx, filled, strokeStyle, beginX, beginY, endX, endY }) {
+        super({ ctx, strokeStyle, filled });
         this.x = beginX;
         this.y = beginY;
         this.endX = endX;
         this.endY = endY;
     }
     createPath() {
-        let { x, y, endX, endY, context } = this;
-        context.beginPath();
-        context.rect(Math.min(x, endX), Math.min(y, endY), Math.abs(x - endX), Math.abs(y - endY));
-        context.closePath();
+        let { x, y, endX, endY, ctx } = this;
+        ctx.beginPath();
+        ctx.rect(Math.min(x, endX), Math.min(y, endY), Math.abs(x - endX), Math.abs(y - endY));
+        ctx.closePath();
     }
     cacheOffset(loc) {
         let { x, y, endX, endY } = this;
@@ -189,35 +189,35 @@ export class Line extends Shape {
         this.endY = loc.y - offsets[1].offsetY;
     }
     draw() {
-        let { x, y, endX, endY, context, strokeStyle } = this;
-        context.save();
-        context.beginPath();
-        context.moveTo(x, y);
-        context.lineTo(endX, endY);
-        context.closePath();
-        context.strokeStyle = strokeStyle;
-        context.stroke();
-        context.restore();
+        let { x, y, endX, endY, ctx, strokeStyle } = this;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(endX, endY);
+        ctx.closePath();
+        ctx.strokeStyle = strokeStyle;
+        ctx.stroke();
+        ctx.restore();
 
     }
 }
 export class Circle extends Shape{
-    constructor({ centerX, centerY, radius, context, filled, strokeStyle, fillStyle }) {
-        super({ context, strokeStyle, fillStyle, filled });
+    constructor({ centerX, centerY, radius, ctx, filled, strokeStyle, fillStyle }) {
+        super({ ctx, strokeStyle, fillStyle, filled });
         this.x = centerX;
         this.y = centerY;
         this.radius = radius;
     }
     createPath() {
-        let { context, x, y, radius } = this;
-        context.beginPath();
-        context.arc(x, y, radius, 0, Math.PI*2, false);
-        context.closePath();
+        let { ctx, x, y, radius } = this;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI*2, false);
+        ctx.closePath();
     }
 }
 export class RoundRect extends Shape {
-    constructor({ context, width, height, cornerRadius = 10, cornerX, cornerY, fillStyle, strokeStyle, filled }) {
-        super({ fillStyle, filled, strokeStyle, context });
+    constructor({ ctx, width, height, cornerRadius = 10, cornerX, cornerY, fillStyle, strokeStyle, filled }) {
+        super({ fillStyle, filled, strokeStyle, ctx });
         this.x = cornerX;
         this.y = cornerY;
         this.cornerRadius = cornerRadius;
@@ -225,21 +225,21 @@ export class RoundRect extends Shape {
         this.height = height;
     }
     createPath() {
-        let { context, width, height, cornerRadius, x: cornerX, y: cornerY } = this;
-        context.beginPath();
-        context.moveTo(cornerX + cornerRadius, cornerY);
-        context.arcTo(cornerX + width, cornerY, cornerX + width, cornerY + height, cornerRadius);
-        context.arcTo(cornerX + width, cornerY + height, cornerX, cornerY + height, cornerRadius);
-        context.arcTo(cornerX, cornerY + height, cornerX, cornerY, cornerRadius);
-        context.arcTo(cornerX, cornerY, cornerX + cornerRadius, cornerY, cornerRadius);
-        context.closePath();
+        let { ctx, width, height, cornerRadius, x: cornerX, y: cornerY } = this;
+        ctx.beginPath();
+        ctx.moveTo(cornerX + cornerRadius, cornerY);
+        ctx.arcTo(cornerX + width, cornerY, cornerX + width, cornerY + height, cornerRadius);
+        ctx.arcTo(cornerX + width, cornerY + height, cornerX, cornerY + height, cornerRadius);
+        ctx.arcTo(cornerX, cornerY + height, cornerX, cornerY, cornerRadius);
+        ctx.arcTo(cornerX, cornerY, cornerX + cornerRadius, cornerY, cornerRadius);
+        ctx.closePath();
     }
 
 }
 export class Polygon extends Shape {
     constructor({ centerX, centerY, radius,
-                    sides, startAngle, strokeStyle, fillStyle, filled, context }) {
-        super({ context, filled, fillStyle, strokeStyle });
+                    sides, startAngle, strokeStyle, fillStyle, filled, ctx }) {
+        super({ ctx, filled, fillStyle, strokeStyle });
         this.x = centerX;
         this.y = centerY;
         this.radius = radius;
@@ -258,12 +258,12 @@ export class Polygon extends Shape {
     }
     createPath() {
         let points = this.getPoints();
-        let { context } = this;
-        context.beginPath();
-        context.moveTo(points[0].x, points[0].y);
+        let { ctx } = this;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
         for (var i=1; i < this.sides; ++i) {
-            context.lineTo(points[i].x, points[i].y);
+            ctx.lineTo(points[i].x, points[i].y);
         }
-        context.closePath();
+        ctx.closePath();
     }
 }

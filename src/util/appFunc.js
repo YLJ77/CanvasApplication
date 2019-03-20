@@ -1,25 +1,25 @@
-function drawPoint({ x, y, radius = 5, context }) {
-    context.save();
-    context.beginPath();
-    context.fillStyle = 'red';
-    context.arc(x, y, radius, 0, 2 * Math.PI, false);
-    context.fill();
-    context.restore();
+function drawPoint({ x, y, radius = 5, ctx }) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = 'red';
+    ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.restore();
 }
-export function drawBatchPoint({ points, context }) {
+export function drawBatchPoint({ points, ctx }) {
     points.forEach((x, index) => {
         if ((index < points.length - 1) && (index + 1) % 2 !== 0) {
             let y = points[index + 1];
-            drawPoint({ x, y, context });
+            drawPoint({ x, y, ctx });
         }
     });
 }
-export function restoreDrawingSurface({ context, imgData }) {
-    context.putImageData(imgData, 0, 0);
+export function restoreDrawingSurface({ ctx, imgData }) {
+    ctx.putImageData(imgData, 0, 0);
 }
 
-export function saveDrawingSurface({ context, canvas }) {
-    return context.getImageData(0, 0,
+export function saveDrawingSurface({ ctx, canvas }) {
+    return ctx.getImageData(0, 0,
         canvas.width,
         canvas.height);
 }
@@ -30,46 +30,46 @@ export function windowToCanvas({x, y, canvas}) {
         y: y - bbox.top * (canvas.height / bbox.height) };
 }
 
-function drawHorizontalLine ({ y, context }) {
-    context.beginPath();
-    context.moveTo(0,y+0.5);
-    context.lineTo(context.canvas.width, y+0.5);
-    context.stroke();
+function drawHorizontalLine ({ y, ctx }) {
+    ctx.beginPath();
+    ctx.moveTo(0,y+0.5);
+    ctx.lineTo(ctx.canvas.width, y+0.5);
+    ctx.stroke();
 }
-function drawVerticalLine ({ x, context }) {
-    context.beginPath();
-    context.moveTo(x+0.5,0);
-    context.lineTo(x+0.5, context.canvas.height);
-    context.stroke();
+function drawVerticalLine ({ x, ctx }) {
+    ctx.beginPath();
+    ctx.moveTo(x+0.5,0);
+    ctx.lineTo(x+0.5, ctx.canvas.height);
+    ctx.stroke();
 }
-export function drawGuidewires({ x, y, context }) {
-    context.save();
-    context.strokeStyle = 'rgba(0,0,230,0.4)';
-    context.lineWidth = 0.5;
-    drawVerticalLine({ x, context });
-    drawHorizontalLine({ y, context });
-    context.restore();
+export function drawGuidewires({ x, y, ctx }) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,230,0.4)';
+    ctx.lineWidth = 0.5;
+    drawVerticalLine({ x, ctx });
+    drawHorizontalLine({ y, ctx });
+    ctx.restore();
 }
-export function drawGrid({ context, color, stepx, stepy }) {
-    context.save();
-    context.strokeStyle = color;
-    context.lineWidth = 0.5;
-    for (let i = stepx + 0.5; i < context.canvas.width; i += stepx) {
-        context.beginPath();
-        context.moveTo(i, 0);
-        context.lineTo(i, context.canvas.height);
-        context.stroke();
+export function drawGrid({ ctx, color, stepx, stepy }) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;
+    for (let i = stepx + 0.5; i < ctx.canvas.width; i += stepx) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, ctx.canvas.height);
+        ctx.stroke();
     }
-    for (let i = stepy + 0.5; i < context.canvas.height; i += stepy) {
-        context.beginPath();
-        context.moveTo(0, i);
-        context.lineTo(context.canvas.width, i);
-        context.stroke();
+    for (let i = stepy + 0.5; i < ctx.canvas.height; i += stepy) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(ctx.canvas.width, i);
+        ctx.stroke();
     }
-    context.restore();
+    ctx.restore();
 }
 
-export function drawAxes({context}) {
+export function drawAxes({ctx}) {
     var AXIS_MARGIN = 40,
         AXIS_ORIGIN = { x: AXIS_MARGIN, y: canvas.height-AXIS_MARGIN },
         AXIS_TOP = AXIS_MARGIN,
@@ -87,52 +87,52 @@ export function drawAxes({context}) {
         AXIS_COLOR = 'blue';
 
     function drawHorizontalAxis() {
-        context.beginPath();
-        context.moveTo(AXIS_ORIGIN.x, AXIS_ORIGIN.y);
-        context.lineTo(AXIS_RIGHT, AXIS_ORIGIN.y);
-        context.stroke();
+        ctx.beginPath();
+        ctx.moveTo(AXIS_ORIGIN.x, AXIS_ORIGIN.y);
+        ctx.lineTo(AXIS_RIGHT, AXIS_ORIGIN.y);
+        ctx.stroke();
     }
     function drawVerticalAxis() {
-        context.beginPath();
-        context.moveTo(AXIS_ORIGIN.x, AXIS_ORIGIN.y);
-        context.lineTo(AXIS_ORIGIN.x, AXIS_TOP);
-        context.stroke();
+        ctx.beginPath();
+        ctx.moveTo(AXIS_ORIGIN.x, AXIS_ORIGIN.y);
+        ctx.lineTo(AXIS_ORIGIN.x, AXIS_TOP);
+        ctx.stroke();
     }
     function drawVerticalAxisTicks() {
         var deltaX;
         for (var i=1; i < NUM_VERTICAL_TICKS; ++i) {
-            context.beginPath();
+            ctx.beginPath();
             if (i % 5 === 0) deltaX = TICK_WIDTH;
             else deltaX = TICK_WIDTH/2;
-            context.moveTo(AXIS_ORIGIN.x - deltaX,
+            ctx.moveTo(AXIS_ORIGIN.x - deltaX,
                 AXIS_ORIGIN.y - i * VERTICAL_TICK_SPACING);
-            context.lineTo(AXIS_ORIGIN.x + deltaX,
+            ctx.lineTo(AXIS_ORIGIN.x + deltaX,
                 AXIS_ORIGIN.y - i * VERTICAL_TICK_SPACING);
-            context.stroke();
+            ctx.stroke();
         }
     }
     function drawHorizontalAxisTicks() {
         var deltaY;
         for (var i=1; i < NUM_HORIZONTAL_TICKS; ++i) {
-            context.beginPath();
+            ctx.beginPath();
             if (i % 5 === 0) deltaY = TICK_WIDTH;
             else deltaY = TICK_WIDTH/2;
-            context.moveTo(AXIS_ORIGIN.x + i * HORIZONTAL_TICK_SPACING,
+            ctx.moveTo(AXIS_ORIGIN.x + i * HORIZONTAL_TICK_SPACING,
                 AXIS_ORIGIN.y - deltaY);
-            context.lineTo(AXIS_ORIGIN.x + i * HORIZONTAL_TICK_SPACING,
+            ctx.lineTo(AXIS_ORIGIN.x + i * HORIZONTAL_TICK_SPACING,
                 AXIS_ORIGIN.y + deltaY);
-            context.stroke();
+            ctx.stroke();
         }
     }
-    context.save();
-    context.strokeStyle = AXIS_COLOR;
-    context.lineWidth = AXIS_LINEWIDTH;
+    ctx.save();
+    ctx.strokeStyle = AXIS_COLOR;
+    ctx.lineWidth = AXIS_LINEWIDTH;
     drawHorizontalAxis();
     drawVerticalAxis();
-    context.lineWidth = 0.5;
-    context.lineWidth = TICKS_LINEWIDTH;
-    context.strokeStyle = TICKS_COLOR;
+    ctx.lineWidth = 0.5;
+    ctx.lineWidth = TICKS_LINEWIDTH;
+    ctx.strokeStyle = TICKS_COLOR;
     drawVerticalAxisTicks();
     drawHorizontalAxisTicks();
-    context.restore();
+    ctx.restore();
 }

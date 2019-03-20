@@ -79,13 +79,13 @@
     margin-top: 10px;
     -webkit-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
     -moz-box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
-    -box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
   }
 </style>
 
 <script>
 import { drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
 import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
+import { Centroid } from '../util/Protractor'
 
 export default {
     data() {
@@ -95,7 +95,7 @@ export default {
             startAngle: 0,
             shape: 'Line',
             isFillColor: false,
-            context: null,
+            ctx: null,
             canvas: null,
             guidewires: true,
             color: 'cornflowerblue',
@@ -110,12 +110,15 @@ export default {
             draggingPoint: false, // End- or control point user is dragging
             endPoints: [ {}, {} ], // Endpoint locations (x, y)
             controlPoints: [ {}, {} ], // Control point locations (x, y)
+            rotatingLockEngaged: false,
+            rotatingLockAngle: 0,
+            polygonRotating: null
         }
     },
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        window.shapes = this.shapes;
+        this.test();
     },
     watch: {
         mode() {
@@ -123,9 +126,24 @@ export default {
         }
     },
     methods: {
+        test() {
+            let { ctx, canvas, rotatingLockAngle } = this;
+            let polygon = {
+                x: canvas.width/2,
+                y: canvas.height/2,
+                radius: 50
+            };
+            let loc = {
+                x: 100,
+                y: 100
+            };
+            let centroid = new Centroid({ ctx, polygon, loc, rotatingLockAngle });
+            centroid.drawCentroid();
+            centroid.drawCentroidGuidewire();
+        },
         startDragging(loc) {
-            let { rubberbandLine: { mousedown }, rubberbandLine, context } = this;
-                rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ context, canvas });
+            let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas } = this;
+                rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ ctx, canvas });
                 mousedown.x = loc.x;
                 mousedown.y = loc.y;
                 rubberbandLine.dragging = true;
@@ -148,8 +166,8 @@ export default {
         },
         drawBezierCurve() {
             this.updateEndAndControlPoints();
-            let { context, shapes, mode, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
-            let curve = new BezierCurve({ context, strokeStyle: color, fillStyle: color, endPoints, controlPoints });
+            let { ctx, shapes, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
+            let curve = new BezierCurve({ ctx, strokeStyle: color, fillStyle: color, endPoints, controlPoints });
             curve.draw();
             if (!dragging) shapes.push(curve);
         },
@@ -164,7 +182,7 @@ export default {
             controlPoints[1].x = rubberbandRect.left + rubberbandRect.width;
             controlPoints[1].y = rubberbandRect.top;
         },
-        drawPolygon({ loc }) {
+        drawPolygon() {
             let {
                 rubberbandLine: {
                     dragging,
@@ -176,7 +194,7 @@ export default {
                         y
                     }
                 },
-                context,
+                ctx,
                 sides,
                 startAngle,
                 isFillColor,
@@ -192,25 +210,25 @@ export default {
                 strokeStyle: color,
                 fillStyle: color,
                 filled: isFillColor,
-                context
+                ctx
             });
             polygon.draw();
             if (!dragging) shapes.push(polygon);
         },
         getContext() {
             this.canvas = document.getElementById('canvas');
-            this.context = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d');
         },
         erase() {
-            let { context, canvas } = this;
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
-            saveDrawingSurface({ context, canvas });
+            let { ctx, canvas } = this;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
+            saveDrawingSurface({ ctx, canvas });
         },
         drawRubberbandLines() {
-            let { context, color } = this;
-            context.strokeStyle = color;
-            drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
+            let { ctx, color } = this;
+            ctx.strokeStyle = color;
+            drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
         },
         updateRubberbandRectangle({ loc }) {
             let {
@@ -232,7 +250,7 @@ export default {
         },
         drawRoundedRect({ cornerRadius = 10 } = {}) {
             let {
-                context,
+                ctx,
                 color,
                 isFillColor,
                 shapes,
@@ -243,7 +261,7 @@ export default {
                 },
             } = this;
             let roundRect = new RoundRect({
-                context,
+                ctx,
                 filled: isFillColor,
                 strokeStyle: color,
                 fillStyle: color,
@@ -258,7 +276,7 @@ export default {
         },
         drawCircle({ loc }) {
             let {
-                context,
+                ctx,
                 rubberbandLine: {
                     dragging,
                     rubberbandRect: { width, height },
@@ -277,13 +295,13 @@ export default {
             } else {
                 radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
             }
-            let circle = new Circle({ centerX: x, centerY: y, radius, context, filled: isFillColor, strokeStyle: color, fillStyle: color })
+            let circle = new Circle({ centerX: x, centerY: y, radius, ctx, filled: isFillColor, strokeStyle: color, fillStyle: color });
             circle.draw();
             if (!dragging) shapes.push(circle);
         },
         drawLine({ loc }) {
             let {
-                context,
+                ctx,
                 rubberbandLine: {
                     mousedown: {
                         x: beginX,
@@ -295,7 +313,7 @@ export default {
                 shapes
             } = this;
             let { x: endX, y: endY } = loc;
-            let line = new Line({ context, strokeStyle: color, beginX, beginY, endX, endY, filled: false })
+            let line = new Line({ ctx, strokeStyle: color, beginX, beginY, endX, endY, filled: false });
             line.draw();
             if (!dragging) shapes.push(line);
         },
@@ -304,10 +322,10 @@ export default {
             this.drawRubberbandShape({ loc });
         },
         onMouseDownEdit({ loc }) {
-            let { shapes, context } = this;
+            let { shapes, ctx } = this;
             for (let shape of shapes) {
                 shape.createEditPath();
-                if (context.isPointInPath(loc.x, loc.y)) {
+                if (ctx.isPointInPath(loc.x, loc.y)) {
                     this.startDragging(loc);
                     this.selectedShape = shape;
                     shape.getDraggingPoint(loc);
@@ -317,11 +335,10 @@ export default {
             }
         },
         onMouseDownDrag({ loc }) {
-            let { shapes, context } = this;
+            let { shapes, ctx } = this;
             for (let shape of shapes) {
                 shape.createPath();
-                if (context.isPointInPath(loc.x, loc.y)) {
-                    let { type } = shape;
+                if (ctx.isPointInPath(loc.x, loc.y)) {
                     this.startDragging(loc);
                     this.selectedShape = shape;
                     shape.cacheOffset(loc);
@@ -352,7 +369,7 @@ export default {
         onMouseMove(e) {
             let {
                 canvas,
-                context,
+                ctx,
                 guidewires,
                 shape,
                 rubberbandLine: {
@@ -375,24 +392,24 @@ export default {
                         selectedShape.updateDraggingPoint(loc);
                         break;
                     case 'normal':
-                        restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+                        restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
                         this.updateRubberband({ loc });
                         if(guidewires) {
                             let pos = shape === 'Line' ? loc : mousedown;
-                            drawGuidewires({ context, x: pos.x, y: pos.y });
+                            drawGuidewires({ ctx, x: pos.x, y: pos.y });
                         }
                         break;
                 }
                 if (mode === 'drag' || mode === 'edit') {
-                    context.clearRect(0, 0, canvas.width, canvas.height);
-                    drawGrid({ context, color: 'lightgray', stepx: 10, stepy: 10 });
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
                     this.drawShapes();
                 }
             }
         },
         onMouseUp(e) {
             let {
-                context,
+                ctx,
                 canvas,
                 rubberbandLine,
                 rubberbandLine: {
@@ -404,7 +421,7 @@ export default {
             let loc = windowToCanvas({ x, y, canvas });
             rubberbandLine.dragging = false;
             if (mode !== 'drag' && mode !== 'edit') {
-            restoreDrawingSurface({ context, imgData: drawingSurfaceImageData });
+            restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
             this.updateRubberband({ loc });
             }
         }
