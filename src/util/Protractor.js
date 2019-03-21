@@ -35,7 +35,7 @@ export class Protractor {
     }
     drawCentroidGuidewire() {  //  导线
         let { loc, polygon, ctx, FILL_STYLE, TRACKING_RING_MARGIN, rotatingLockAngle } = this;
-        var angle = Math.atan( (loc.y - polygon.y) / (loc.x - polygon.x) ),
+        let angle = Math.atan( (loc.y - polygon.y) / (loc.x - polygon.x) ),
             radius, endpt;
 
         radius = polygon.radius + TRACKING_RING_MARGIN;
@@ -72,26 +72,99 @@ export class Protractor {
         let { ctx, polygon, DEGREE_OUTER_RING_MARGIN } = this;
         ctx.save();
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.beginPath();
+        // ctx.beginPath();
         ctx.arc(polygon.x, polygon.y,
             polygon.radius + DEGREE_OUTER_RING_MARGIN,
             0, Math.PI*2, true);
         ctx.stroke();
         ctx.restore();
     }
-    drawDegreeAnnotations() {
+    drawDegreeAnnotations() {   // 度数数字
         let { polygon, TICK_WIDTH, DEGREE_RING_MARGIN, ctx, DEGREE_ANNOTATIONS_FILL_STYLE, DEGREE_ANNOTATIONS_TEXT_SIZE } = this;
         let radius = polygon.radius + DEGREE_RING_MARGIN;
         ctx.save();
         ctx.fillStyle = DEGREE_ANNOTATIONS_FILL_STYLE;
         ctx.font = DEGREE_ANNOTATIONS_TEXT_SIZE + 'px Helvetica';
 
-        for (var angle=0; angle < 2*Math.PI; angle += Math.PI/8) {
+        for (let angle=0; angle < 2*Math.PI; angle += Math.PI/8) {
             ctx.beginPath();
             ctx.fillText((angle * 180 / Math.PI).toFixed(0),
                 polygon.x + Math.cos(angle) * (radius - TICK_WIDTH*2),
                 polygon.y + Math.sin(angle) * (radius - TICK_WIDTH*2));
+
         }
         ctx.restore();
+    }
+    drawDegreeDialTicks() { // 刻度线
+        let { polygon, DEGREE_RING_MARGIN, ctx, TICK_WIDTH, TICK_LONG_STROKE_STYLE, TICK_SHORT_STROKE_STYLE } = this;
+        let radius = polygon.radius + DEGREE_RING_MARGIN,
+            ANGLE_MAX = 2*Math.PI,
+            ANGLE_DELTA = Math.PI/64;
+
+        ctx.save();
+
+        for (let angle = 0, cnt = 0; angle < ANGLE_MAX; angle += ANGLE_DELTA, ++cnt) {
+            ctx.beginPath();
+
+            if (cnt % 4 === 0) {
+                ctx.moveTo(polygon.x + Math.cos(angle) * (radius - TICK_WIDTH),
+                    polygon.y + Math.sin(angle) * (radius - TICK_WIDTH));
+                ctx.lineTo(polygon.x + Math.cos(angle) * (radius),
+                    polygon.y + Math.sin(angle) * (radius));
+                ctx.strokeStyle = TICK_LONG_STROKE_STYLE;
+                ctx.stroke();
+            }
+            else {
+                ctx.moveTo(polygon.x + Math.cos(angle) * (radius - TICK_WIDTH/2),
+                    polygon.y + Math.sin(angle) * (radius - TICK_WIDTH/2));
+                ctx.lineTo(polygon.x + Math.cos(angle) * (radius),
+                    polygon.y + Math.sin(angle) * (radius));
+                ctx.strokeStyle = TICK_SHORT_STROKE_STYLE;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+    }
+    drawDegreeInnerDial() { //  刻度盘内层圆环
+        let { polygon, ctx, DEGREE_RING_MARGIN, TICK_WIDTH } = this;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.beginPath();
+        ctx.arc(polygon.x, polygon.y, polygon.radius + DEGREE_RING_MARGIN - TICK_WIDTH, 0, Math.PI*2, false);
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawOutMostDial() {    //  最外层圆环
+        let { polygon, ctx, TRACKING_RING_STROKING_STYLE, TRACKING_RING_MARGIN } = this;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowOffsetX = 3,
+            ctx.shadowOffsetY = 3,
+            ctx.shadowBlur = 6,
+            ctx.strokeStyle = TRACKING_RING_STROKING_STYLE;
+        // ctx.beginPath();
+        ctx.arc(polygon.x, polygon.y, polygon.radius +
+            TRACKING_RING_MARGIN, 0, Math.PI*2, false);
+        ctx.stroke();
+        ctx.restore();
+    }
+    draw() {
+        let { ctx } = this;
+        this.drawCentroid();
+        this.drawCentroidGuidewire();
+        ctx.beginPath();
+        this.drawOutMostDial();
+        this.drawDegreeOuterDial();
+        ctx.fillStyle = 'rgba(100, 140, 230, 0.1)';
+        ctx.fill();
+
+        ctx.beginPath();
+        this.drawDegreeOuterDial();
+        ctx.stroke();
+
+        this.drawDegreeDialTicks();
+        this.drawDegreeInnerDial();
+        this.drawDegreeAnnotations();
     }
 }

@@ -21,7 +21,7 @@
       </li>
       <li>
         <label for="shape">形状</label>
-        <select id="shape" v-model="shape" @change="dragMode=false">
+        <select id="shape" v-model="shape" @change="mode='normal'">
         <option value='Circle'>circle</option>
         <option value='Line' selected>line</option>
         <option value='RoundedRect' selected>RoundedRect</option>
@@ -138,10 +138,7 @@ export default {
                 y: 100
             };
             let protractor = new Protractor({ ctx, polygon, loc, rotatingLockAngle });
-            protractor.drawCentroid();
-            protractor.drawCentroidGuidewire();
-            protractor.drawDegreeOuterDial();
-            protractor.drawDegreeAnnotations();
+            protractor.draw();
         },
         startDragging(loc) {
             let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas } = this;
@@ -403,9 +400,7 @@ export default {
                         break;
                 }
                 if (mode === 'drag' || mode === 'edit') {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
-                    this.drawShapes();
+                    this.redraw();
                 }
             }
         },
@@ -426,6 +421,12 @@ export default {
             restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
             this.updateRubberband({ loc });
             }
+        },
+        redraw() {
+            let { ctx, canvas } = this;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
+            this.drawShapes();
         }
     },
 }
