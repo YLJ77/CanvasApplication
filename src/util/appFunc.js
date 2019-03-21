@@ -69,7 +69,7 @@ export function drawGrid({ ctx, color, stepx, stepy }) {
     ctx.restore();
 }
 
-export function drawAxes({ctx}) {
+export function drawAxes({ctx, canvas}) {
     var AXIS_MARGIN = 40,
         AXIS_ORIGIN = { x: AXIS_MARGIN, y: canvas.height-AXIS_MARGIN },
         AXIS_TOP = AXIS_MARGIN,

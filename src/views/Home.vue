@@ -85,7 +85,7 @@
 <script>
 import { drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
 import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
-import { Centroid } from '../util/Protractor'
+import { Protractor } from '../util/Protractor'
 
 export default {
     data() {
@@ -131,15 +131,17 @@ export default {
             let polygon = {
                 x: canvas.width/2,
                 y: canvas.height/2,
-                radius: 50
+                radius: 80
             };
             let loc = {
                 x: 100,
                 y: 100
             };
-            let centroid = new Centroid({ ctx, polygon, loc, rotatingLockAngle });
-            centroid.drawCentroid();
-            centroid.drawCentroidGuidewire();
+            let protractor = new Protractor({ ctx, polygon, loc, rotatingLockAngle });
+            protractor.drawCentroid();
+            protractor.drawCentroidGuidewire();
+            protractor.drawDegreeOuterDial();
+            protractor.drawDegreeAnnotations();
         },
         startDragging(loc) {
             let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas } = this;

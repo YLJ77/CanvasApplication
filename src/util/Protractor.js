@@ -1,4 +1,4 @@
-export class Centroid {
+export class Protractor {
     constructor({ ctx, polygon, loc, rotatingLockAngle }) {
         this.ctx = ctx;
         this.polygon = polygon;
@@ -66,6 +66,32 @@ export class Centroid {
         ctx.fillStyle = FILL_STYLE;
         ctx.fill();
 
+        ctx.restore();
+    }
+    drawDegreeOuterDial() { // 刻度盘外层圆环
+        let { ctx, polygon, DEGREE_OUTER_RING_MARGIN } = this;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.beginPath();
+        ctx.arc(polygon.x, polygon.y,
+            polygon.radius + DEGREE_OUTER_RING_MARGIN,
+            0, Math.PI*2, true);
+        ctx.stroke();
+        ctx.restore();
+    }
+    drawDegreeAnnotations() {
+        let { polygon, TICK_WIDTH, DEGREE_RING_MARGIN, ctx, DEGREE_ANNOTATIONS_FILL_STYLE, DEGREE_ANNOTATIONS_TEXT_SIZE } = this;
+        let radius = polygon.radius + DEGREE_RING_MARGIN;
+        ctx.save();
+        ctx.fillStyle = DEGREE_ANNOTATIONS_FILL_STYLE;
+        ctx.font = DEGREE_ANNOTATIONS_TEXT_SIZE + 'px Helvetica';
+
+        for (var angle=0; angle < 2*Math.PI; angle += Math.PI/8) {
+            ctx.beginPath();
+            ctx.fillText((angle * 180 / Math.PI).toFixed(0),
+                polygon.x + Math.cos(angle) * (radius - TICK_WIDTH*2),
+                polygon.y + Math.sin(angle) * (radius - TICK_WIDTH*2));
+        }
         ctx.restore();
     }
 }
