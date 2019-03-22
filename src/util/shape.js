@@ -27,6 +27,7 @@ class Shape {
         })
     }
     createPath() {}
+    createEditPath() {}
     draw() {
         let { ctx, filled } = this;
         ctx.save();
@@ -38,6 +39,28 @@ class Shape {
             ctx.fill();
         }
         ctx.restore();
+    }
+    drawRotateShape(angle) {
+        let { ctx } = this;
+        let tx = this.x,
+            ty = this.y;
+
+        ctx.save();
+
+        ctx.translate(tx, ty);
+
+        if (angle) {
+            ctx.rotate(angle);
+        }
+
+        this.x = 0;
+        this.y = 0;
+
+        this.draw();
+        ctx.restore();
+
+        this.x = tx;
+        this.y = ty;
     }
     move(x, y) {
         this.x = x;
@@ -249,7 +272,7 @@ export class Polygon extends Shape {
     getPoints() {
         let points = [],
             angle = this.startAngle || 0;
-        for (var i=0; i < this.sides; ++i) {
+        for (let i=0; i < this.sides; ++i) {
             points.push(new Point(this.x + this.radius * Math.sin(angle),
                 this.y - this.radius * Math.cos(angle)));
             angle += 2*Math.PI/this.sides;
@@ -261,7 +284,7 @@ export class Polygon extends Shape {
         let { ctx } = this;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
-        for (var i=1; i < this.sides; ++i) {
+        for (let i=1; i < this.sides; ++i) {
             ctx.lineTo(points[i].x, points[i].y);
         }
         ctx.closePath();

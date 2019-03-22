@@ -121,6 +121,9 @@ export default {
         this.test();
     },
     watch: {
+        selectedShape() {
+            console.log(this.selectedShape);
+        },
         mode() {
             this.mode === 'drag' || this.mode === 'edit' ? this.startEditing() : this.stopEditing();
         }
@@ -333,13 +336,15 @@ export default {
                 }
             }
         },
-        onMouseDownDrag({ loc }) {
+        getSelectedShape({ loc, isEdit }) {
             let { shapes, ctx } = this;
             for (let shape of shapes) {
-                shape.createPath();
+                isEdit ? shape.createEditPath() : shape.createPath();
                 if (ctx.isPointInPath(loc.x, loc.y)) {
                     this.startDragging(loc);
                     this.selectedShape = shape;
+                    console.warn(shape.type);
+                    isEdit && shape.getDraggingPoint(loc);
                     shape.cacheOffset(loc);
                     break;
                 }
@@ -355,10 +360,10 @@ export default {
             e.preventDefault(); // Prevent cursor change
             switch (mode) {
                 case 'drag':
-                    this.onMouseDownDrag({ loc });
+                    this.getSelectedShape({ loc });
                     break;
                 case 'edit':
-                    this.onMouseDownEdit({ loc });
+                    this.getSelectedShape({ loc, isEdit: true });
                     break;
                 case 'normal':
                     this.startDragging(loc);
