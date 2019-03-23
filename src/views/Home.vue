@@ -114,7 +114,8 @@ export default {
             controlPoints: [ {}, {} ], // Control point locations (x, y)
             rotatingLockEngaged: false,
             rotatingLockAngle: 0,
-            shapeRotating: null
+            rotatingShape: null,
+            protractor: null
         }
     },
     mounted() {
@@ -170,13 +171,14 @@ export default {
                 rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ ctx, canvas });
                 mousedown.x = loc.x;
                 mousedown.y = loc.y;
-                switch (mode) {
+/*                switch (mode) {
                     case 'drag':
                     case 'edit':
                     case 'normal':
                         rubberbandLine.dragging = true;
                         break;
-                }
+                }*/
+            rubberbandLine.dragging = true;
         },
         drawShapes() {
             let { shapes } = this;
@@ -384,6 +386,26 @@ export default {
                     this.rotatingLockAngle = Math.atan((loc.y - selectedShape.y) /
                         (loc.x - selectedShape.x));
                 }
+                this.protractor = protractor;
+            }
+        },
+        rotateShape(loc) {
+            let { rotatingLockEngaged, selectedShape, rotatingLockAngle, protractor } = this;
+            this.rotatingShape = Object.assign( Object.create( Object.getPrototypeOf(selectedShape)), selectedShape);
+            let {rotatingShape } = this;
+            if (rotatingLockEngaged) {
+               let angle = Math.atan((loc.y - rotatingShape.y) /
+                    (loc.x - rotatingShape.x))
+                console.log(`angle: ${ 180/Math.PI * angle }`)
+/*                console.log(`rotatingLockAngle: ${ 180/Math.PI * rotatingLockAngle }`)
+                console.log(`result: ${ 180/Math.PI * (angle - rotatingLockAngle) }`)*/
+                this.redraw();
+                // drawPolygon(rotatingShape, angle);
+                // drawRotationAnnotations(loc);
+                rotatingShape.rotate(angle - rotatingLockAngle);
+                protractor.loc = loc;
+                protractor.draw();
+
             }
         },
         onMouseDown(e) {
@@ -444,6 +466,9 @@ export default {
                 if (mode === 'drag' || mode === 'edit') {
                     this.redraw();
                 }
+            }
+            if (mode === 'rotate') {
+                selectedShape && this.rotateShape(loc);
             }
         },
         onMouseUp(e) {

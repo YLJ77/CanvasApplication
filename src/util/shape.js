@@ -42,7 +42,7 @@ class Shape {
         }
         ctx.restore();
     }
-    drawRotateShape(angle) {
+    rotate(angle) {
         let { ctx } = this;
         let tx = this.x,
             ty = this.y;
@@ -201,6 +201,31 @@ export class Line extends Shape {
         this.endY = endY;
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
+    rotate(angle) {
+        let { ctx, endX, endY, x, y } = this;
+        let tx = this.x,
+            ty = this.y;
+        console.warn(angle * (180/Math.PI))
+
+        ctx.save();
+
+        ctx.translate(tx, ty);
+
+        if (angle) {
+            ctx.rotate(angle);
+        }
+
+        this.x = 0;
+        this.y = 0;
+        this.endX = endX - x;
+        this.endY = endY - y;
+
+        this.draw();
+        ctx.restore();
+
+        this.x = tx;
+        this.y = ty;
+    }
     createPath() {
         let { x, y, endX, endY, ctx } = this;
         ctx.beginPath();
@@ -258,6 +283,19 @@ export class RoundRect extends Shape {
         this.width = width;
         this.height = height;
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+    }
+    savePointOffset(loc) {
+        let { cornerX, cornerY } = this;
+        this.offsets = [];
+        let offsetX = loc.x -cornerX;
+        let offsetY = loc.y - cornerY;
+        this.offsets.push({ offsetX, offsetY });
+    }
+    updatePoints(loc) {
+        this.offsets.forEach(offset => {
+            this.cornerX = loc.x - offset.offsetX;
+            this.cornerY = loc.y - offset.offsetY;
+        })
     }
     createPath() {
         let { ctx, width, height, cornerRadius, cornerX, cornerY } = this;
