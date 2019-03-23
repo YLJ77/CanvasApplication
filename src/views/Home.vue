@@ -118,12 +118,9 @@ export default {
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        this.test();
+        // this.test();
     },
     watch: {
-        selectedShape() {
-            console.log(this.selectedShape);
-        },
         mode() {
             this.mode === 'drag' || this.mode === 'edit' ? this.startEditing() : this.stopEditing();
         }
@@ -343,8 +340,7 @@ export default {
                 if (ctx.isPointInPath(loc.x, loc.y)) {
                     this.startDragging(loc);
                     this.selectedShape = shape;
-                    console.warn(shape.type);
-                    isEdit && shape.getDraggingPoint(loc);
+                    if(isEdit) shape.getDraggingPoint(loc);
                     shape.cacheOffset(loc);
                     break;
                 }

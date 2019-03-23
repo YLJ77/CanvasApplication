@@ -27,7 +27,9 @@ class Shape {
         })
     }
     createPath() {}
-    createEditPath() {}
+    createEditPath() {
+        this.createPath();
+    }
     draw() {
         let { ctx, filled } = this;
         ctx.save();
@@ -105,11 +107,13 @@ export class BezierCurve extends Shape {
     }
     drawCurve() {
         let { endPoints, controlPoints, ctx } = this;
+        ctx.beginPath();
         ctx.moveTo(endPoints[0].x, endPoints[0].y);
         ctx.bezierCurveTo(controlPoints[0].x, controlPoints[0].y,
             controlPoints[1].x, controlPoints[1].y,
             endPoints[1].x, endPoints[1].y);
         this.stroke();
+        ctx.closePath();
     }
     cacheOffset(loc) {
         let { endPoints, controlPoints } = this;
