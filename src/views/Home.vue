@@ -44,6 +44,8 @@
           <label for="edit-radio">编辑</label>
           <input type="radio" id="edit-radio" v-model="mode" value="edit">
         </template>
+        <label for="rotate-radio">旋转</label>
+        <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
         <label for="guidewireCheckbox">导线</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
@@ -112,7 +114,7 @@ export default {
             controlPoints: [ {}, {} ], // Control point locations (x, y)
             rotatingLockEngaged: false,
             rotatingLockAngle: 0,
-            polygonRotating: null
+            shapeRotating: null
         }
     },
     mounted() {
@@ -122,7 +124,18 @@ export default {
     },
     watch: {
         mode() {
-            this.mode === 'drag' || this.mode === 'edit' ? this.startEditing() : this.stopEditing();
+            let { canvas, mode } = this;
+            switch (mode) {
+                case 'drag':
+                case 'edit':
+                case 'rotate':
+                    canvas.style.cursor = 'pointer';
+                    break;
+                case 'normal':
+                    canvas.style.cursor = 'crosshair';
+                    break;
+
+            }
         }
     },
     methods: {
@@ -140,22 +153,30 @@ export default {
             let protractor = new Protractor({ ctx, polygon, loc, rotatingLockAngle });
             protractor.draw();
         },
-        startDragging(loc) {
-            let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas } = this;
+        stopRotatingShape(loc) {
+            let { selectedShape, rotatingLockAngle } = this;
+            let angle = Math.atan((loc.y - selectedShape.y) /
+                (loc.x - selectedShape.x))
+                - rotatingLockAngle;
+
+            selectedShape.startAngle += angle;
+
+            this.selectedShape = undefined;
+            this.rotatingLockEngaged = false;
+            this.rotatingLockAngle = 0;
+        },
+        saveCanvasInfo(loc) {
+            let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas, mode } = this;
                 rubberbandLine.drawingSurfaceImageData = saveDrawingSurface({ ctx, canvas });
                 mousedown.x = loc.x;
                 mousedown.y = loc.y;
-                rubberbandLine.dragging = true;
-        },
-        startEditing() {
-            let { canvas } = this;
-            canvas.style.cursor = 'pointer';
-            // this.mode = 'drag';
-        },
-        stopEditing() {
-            let { canvas } = this;
-            canvas.style.cursor = 'crosshair';
-            // this.mode = 'normal';
+                switch (mode) {
+                    case 'drag':
+                    case 'edit':
+                    case 'normal':
+                        rubberbandLine.dragging = true;
+                        break;
+                }
         },
         drawShapes() {
             let { shapes } = this;
@@ -320,29 +341,48 @@ export default {
             this.updateRubberbandRectangle({ loc });
             this.drawRubberbandShape({ loc });
         },
-        onMouseDownEdit({ loc }) {
-            let { shapes, ctx } = this;
+        getSelectedShape({ loc }) {
+            let { shapes, ctx, mode } = this;
             for (let shape of shapes) {
-                shape.createEditPath();
+                switch (mode) {
+                    case 'drag':
+                    case 'rotate':
+                        shape.createPath();
+                        break;
+                    case 'edit':
+                        shape.createEditPath();
+                }
                 if (ctx.isPointInPath(loc.x, loc.y)) {
-                    this.startDragging(loc);
                     this.selectedShape = shape;
-                    shape.getDraggingPoint(loc);
-                    shape.cacheOffset(loc);
+                    switch (mode) {
+                        case 'edit':
+                            shape.getDraggingPoint(loc);
+                            shape.savePointOffset(loc);
+                            break;
+                        case 'drag':
+                            shape.savePointOffset(loc);
+                            break;
+                    }
                     break;
                 }
             }
         },
-        getSelectedShape({ loc, isEdit }) {
-            let { shapes, ctx } = this;
-            for (let shape of shapes) {
-                isEdit ? shape.createEditPath() : shape.createPath();
-                if (ctx.isPointInPath(loc.x, loc.y)) {
-                    this.startDragging(loc);
-                    this.selectedShape = shape;
-                    if(isEdit) shape.getDraggingPoint(loc);
-                    shape.cacheOffset(loc);
-                    break;
+        initProtractor(loc) {
+            let { ctx, rotatingLockAngle, rotatingLockEngaged } = this;
+            if (this.selectedShape) {
+                this.stopRotatingShape(loc);
+                this.redraw();
+            }
+            this.getSelectedShape({ loc });
+            let { selectedShape } = this;
+            if (this.selectedShape) {
+                let protractor = new Protractor({ ctx, shape: selectedShape, loc, rotatingLockAngle });
+                protractor.draw();
+
+                if (!rotatingLockEngaged) {
+                    this.rotatingLockEngaged = true;
+                    this.rotatingLockAngle = Math.atan((loc.y - selectedShape.y) /
+                        (loc.x - selectedShape.x));
                 }
             }
         },
@@ -354,15 +394,16 @@ export default {
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             e.preventDefault(); // Prevent cursor change
+            this.saveCanvasInfo(loc);
             switch (mode) {
                 case 'drag':
                     this.getSelectedShape({ loc });
                     break;
                 case 'edit':
-                    this.getSelectedShape({ loc, isEdit: true });
+                    this.getSelectedShape({ loc });
                     break;
-                case 'normal':
-                    this.startDragging(loc);
+                case 'rotate':
+                    this.initProtractor(loc);
                     break;
             }
         },
@@ -386,10 +427,10 @@ export default {
             if (dragging) {
                 switch (mode) {
                     case 'drag':
-                        selectedShape.updatePoints(loc);
+                        selectedShape && selectedShape.updatePoints(loc);
                         break;
                     case 'edit':
-                        selectedShape.updateDraggingPoint(loc);
+                        selectedShape && selectedShape.updateDraggingPoint(loc);
                         break;
                     case 'normal':
                         restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
@@ -418,9 +459,9 @@ export default {
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
             rubberbandLine.dragging = false;
-            if (mode !== 'drag' && mode !== 'edit') {
-            restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
-            this.updateRubberband({ loc });
+            if (mode === 'normal') {
+                restoreDrawingSurface({ ctx, imgData: drawingSurfaceImageData });
+                this.updateRubberband({ loc });
             }
         },
         redraw() {

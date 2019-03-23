@@ -13,7 +13,7 @@ class Shape {
         this.type = new.target.name;
         this.offsets = null;
     }
-    cacheOffset(loc) {
+    savePointOffset(loc) {
         let { x, y } = this;
         this.offsets = [];
         let offsetX = loc.x -x;
@@ -76,6 +76,10 @@ export class BezierCurve extends Shape {
         this.controlPoints = JSON.parse(JSON.stringify(controlPoints));
         this.draggingPoint = null;
         this.pointRadius = pointRadius;
+        let { width, height, x: minX, y: minY } = this.getRectInfo();
+        this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+        this.x = width / 2 + minX;
+        this.y = height / 2 + minY;
     }
     stroke({ filled = false } = {}) {
         let { ctx, strokeStyle, fillStyle } = this;
@@ -115,7 +119,7 @@ export class BezierCurve extends Shape {
         this.stroke();
         ctx.closePath();
     }
-    cacheOffset(loc) {
+    savePointOffset(loc) {
         let { endPoints, controlPoints } = this;
         this.offsets = [];
         endPoints.concat(controlPoints).forEach(point => {
@@ -195,6 +199,7 @@ export class Line extends Shape {
         this.y = beginY;
         this.endX = endX;
         this.endY = endY;
+        this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
     createPath() {
         let { x, y, endX, endY, ctx } = this;
@@ -202,7 +207,7 @@ export class Line extends Shape {
         ctx.rect(Math.min(x, endX), Math.min(y, endY), Math.abs(x - endX), Math.abs(y - endY));
         ctx.closePath();
     }
-    cacheOffset(loc) {
+    savePointOffset(loc) {
         let { x, y, endX, endY } = this;
         this.offsets = [];
         this.offsets.push({ offsetX: loc.x - x, offsetY: loc.y - y });
@@ -245,14 +250,17 @@ export class Circle extends Shape{
 export class RoundRect extends Shape {
     constructor({ ctx, width, height, cornerRadius = 10, cornerX, cornerY, fillStyle, strokeStyle, filled }) {
         super({ fillStyle, filled, strokeStyle, ctx });
-        this.x = cornerX;
-        this.y = cornerY;
+        this.cornerX = cornerX;
+        this.cornerY = cornerY;
+        this.x = width / 2 + cornerX;
+        this.y = height / 2 + cornerY;
         this.cornerRadius = cornerRadius;
         this.width = width;
         this.height = height;
+        this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
     }
     createPath() {
-        let { ctx, width, height, cornerRadius, x: cornerX, y: cornerY } = this;
+        let { ctx, width, height, cornerRadius, cornerX, cornerY } = this;
         ctx.beginPath();
         ctx.moveTo(cornerX + cornerRadius, cornerY);
         ctx.arcTo(cornerX + width, cornerY, cornerX + width, cornerY + height, cornerRadius);
