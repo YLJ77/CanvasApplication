@@ -205,7 +205,6 @@ export class Line extends Shape {
         let { ctx, endX, endY, x, y } = this;
         let tx = this.x,
             ty = this.y;
-        console.warn(angle * (180/Math.PI))
 
         ctx.save();
 
