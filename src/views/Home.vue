@@ -32,8 +32,8 @@
       <li v-show="shape === 'Polygon'">
         <label for="sides">边数</label>
         <input type="text" id="sides" v-model="sides">
-        <label for="startAngle">开始角度</label>
-        <input type="text" id="startAngle" v-model="startAngle">
+        <label for="startRadians">开始角度</label>
+        <input type="text" id="startRadians" v-model="startRadians">
       </li>
       <li>
         <label for="normal-radio">画图</label>
@@ -44,8 +44,10 @@
           <label for="edit-radio">编辑</label>
           <input type="radio" id="edit-radio" v-model="mode" value="edit">
         </template>
-        <label for="rotate-radio">旋转</label>
-        <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
+        <template v-if="shape === 'Polygon'">
+          <label for="rotate-radio">旋转</label>
+          <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
+        </template>
         <label for="guidewireCheckbox">导线</label>
         <input id='guidewireCheckbox' v-model="guidewires" type='checkbox' checked/>
         <label for="checkbox">填充:</label>
@@ -94,7 +96,7 @@ export default {
         return {
             shapes: [],
             sides: 3,
-            startAngle: 0,
+            startRadians: 0,
             shape: 'Line',
             isFillColor: false,
             ctx: null,
@@ -113,7 +115,7 @@ export default {
             endPoints: [ {}, {} ], // Endpoint locations (x, y)
             controlPoints: [ {}, {} ], // Control point locations (x, y)
             rotatingLockEngaged: false,
-            rotatingLockAngle: 0,
+            rotatingLockRadians: 0,
             rotatingShape: null,
             protractor: null
         }
@@ -121,7 +123,6 @@ export default {
     mounted() {
         this.getContext();
         this.drawRubberbandLines();
-        // this.test();
     },
     watch: {
         mode() {
@@ -140,31 +141,18 @@ export default {
         }
     },
     methods: {
-        test() {
-            let { ctx, canvas, rotatingLockAngle } = this;
-            let polygon = {
-                x: canvas.width/2,
-                y: canvas.height/2,
-                radius: 80
-            };
-            let loc = {
-                x: 100,
-                y: 100
-            };
-            let protractor = new Protractor({ ctx, polygon, loc, rotatingLockAngle });
-            protractor.draw();
-        },
         stopRotatingShape(loc) {
-            let { selectedShape, rotatingLockAngle } = this;
-            let angle = Math.atan((loc.y - selectedShape.y) /
+            let { selectedShape, rotatingLockRadians } = this;
+            let radians = Math.atan((loc.y - selectedShape.y) /
                 (loc.x - selectedShape.x))
-                - rotatingLockAngle;
+                - rotatingLockRadians;
 
-            selectedShape.startAngle += angle;
+            selectedShape.startRadians += radians;
 
-            this.selectedShape = undefined;
+            this.rotatingShape = undefined;
             this.rotatingLockEngaged = false;
-            this.rotatingLockAngle = 0;
+            this.rotatingLockRadians = 0;
+            this.redraw();
         },
         saveCanvasInfo(loc) {
             let { rubberbandLine: { mousedown }, rubberbandLine, ctx, canvas } = this;
@@ -211,7 +199,7 @@ export default {
                 },
                 ctx,
                 sides,
-                startAngle,
+                startRadians,
                 isFillColor,
                 color,
                 shapes
@@ -221,7 +209,7 @@ export default {
                 centerY: y,
                 radius: width,
                 sides,
-                startAngle,
+                startRadians,
                 strokeStyle: color,
                 fillStyle: color,
                 filled: isFillColor,
@@ -245,7 +233,7 @@ export default {
             ctx.strokeStyle = color;
             drawGrid({ ctx, color: 'lightgray', stepx: 10, stepy: 10 });
         },
-        updateRubberbandRectangle({ loc }) {
+        updateRubberbandRectradians({ loc }) {
             let {
                 rubberbandLine: {
                     rubberbandRect,
@@ -333,7 +321,7 @@ export default {
             if (!dragging) shapes.push(line);
         },
         updateRubberband({ loc }) {
-            this.updateRubberbandRectangle({ loc });
+            this.updateRubberbandRectradians({ loc });
             this.drawRubberbandShape({ loc });
         },
         getSelectedShape({ loc }) {
@@ -357,45 +345,42 @@ export default {
                         case 'drag':
                             shape.savePointOffset(loc);
                             break;
+                        case 'rotate':
+                            this.rotatingShape = Object.assign( Object.create( Object.getPrototypeOf(shape)), shape);
+                            break;
                     }
                     break;
                 }
             }
         },
         initProtractor(loc) {
-            let { ctx, rotatingLockAngle, rotatingLockEngaged } = this;
-            if (this.selectedShape) {
-                this.stopRotatingShape(loc);
-                this.redraw();
-            }
-            this.getSelectedShape({ loc });
-            let { selectedShape } = this;
-            if (this.selectedShape) {
-                let protractor = new Protractor({ ctx, shape: selectedShape, loc, rotatingLockAngle });
+            let { ctx, rotatingLockRadians, rotatingLockEngaged } = this;
+            let { rotatingShape } = this;
+            if (this.rotatingShape) {
+                let protractor = new Protractor({ ctx, shape: rotatingShape, loc, rotatingLockRadians });
                 protractor.draw();
 
                 if (!rotatingLockEngaged) {
                     this.rotatingLockEngaged = true;
-                    this.rotatingLockAngle = Math.atan((loc.y - selectedShape.y) /
-                        (loc.x - selectedShape.x));
+                    this.rotatingLockRadians = Math.atan((loc.y - rotatingShape.y) /
+                        (loc.x - rotatingShape.x));
                 }
                 this.protractor = protractor;
             }
         },
         rotateShape(loc) {
-            let { rotatingLockEngaged, selectedShape, rotatingLockAngle, protractor } = this;
-            this.rotatingShape = Object.assign( Object.create( Object.getPrototypeOf(selectedShape)), selectedShape);
+            let { rotatingLockEngaged, rotatingLockRadians, protractor } = this;
             let {rotatingShape } = this;
             if (rotatingLockEngaged) {
                 let y = loc.y - rotatingShape.y;
                 let x = loc.x - rotatingShape.x;
-               let angle = Math.atan( y /
-                    x) - rotatingLockAngle;
+               let radians = Math.atan( y /
+                    x) - rotatingLockRadians;
                 if (x < 0 && y > 0 || x < 0 && y <= 0) {
-                    angle = Math.PI + angle;
+                    radians = Math.PI + radians;
                 }
                 this.redraw();
-                rotatingShape.rotate(angle);
+                rotatingShape.rotate(radians);
                 protractor.loc = loc;
                 protractor.draw();
 
@@ -405,6 +390,7 @@ export default {
             let {
                 canvas,
                 mode,
+                rotatingShape
             } = this;
             let { clientX: x, clientY: y } = e;
             let loc = windowToCanvas({ x, y, canvas });
@@ -418,7 +404,12 @@ export default {
                     this.getSelectedShape({ loc });
                     break;
                 case 'rotate':
-                    this.initProtractor(loc);
+                    if (rotatingShape) {
+                        this.stopRotatingShape(loc);
+                    } else {
+                        this.getSelectedShape({ loc });
+                        this.initProtractor(loc);
+                    }
                     break;
             }
         },
@@ -435,6 +426,7 @@ export default {
                 },
                 mode,
                 selectedShape,
+                rotatingShape
             } = this;
             let { clientX: x, clientY: y } = e;
             e.preventDefault(); // Prevent selections
@@ -461,7 +453,7 @@ export default {
                 }
             }
             if (mode === 'rotate') {
-                selectedShape && this.rotateShape(loc);
+                rotatingShape && this.rotateShape(loc);
             }
         },
         onMouseUp(e) {

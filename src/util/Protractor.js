@@ -1,9 +1,9 @@
 export class Protractor {
-    constructor({ ctx, shape, loc, rotatingLockAngle }) {
+    constructor({ ctx, shape, loc, rotatingLockRadians }) {
         this.ctx = ctx;
         this.shape = shape;
         this.loc = loc;
-        this.rotatingLockAngle = rotatingLockAngle;
+        this.rotatingLockRadians = rotatingLockRadians;
 
         this.RADIUS = 10;
         this.STROKE_STYLE = 'rgba(0, 0, 0, 0.8)';
@@ -34,23 +34,23 @@ export class Protractor {
         ctx.restore();
     }
     drawCentroidGuidewire() {  //  导线
-        let { loc, shape, ctx, FILL_STYLE, TRACKING_RING_MARGIN, rotatingLockAngle } = this;
-        let angle = Math.atan( (loc.y - shape.y) / (loc.x - shape.x) ),
+        let { loc, shape, ctx, FILL_STYLE, TRACKING_RING_MARGIN, rotatingLockRadians } = this;
+        let radians = Math.atan( (loc.y - shape.y) / (loc.x - shape.x) ),
             radius, endpt;
 
         radius = shape.radius + TRACKING_RING_MARGIN;
-        angle = angle - rotatingLockAngle;
+        radians = radians - rotatingLockRadians;
 
         if (loc.x >= shape.x) {
             endpt = {
-                x: shape.x + radius * Math.cos(angle),
-                y: shape.y + radius * Math.sin(angle)
+                x: shape.x + radius * Math.cos(radians),
+                y: shape.y + radius * Math.sin(radians)
             };
         }
         else {
             endpt = {
-                x: shape.x - radius * Math.cos(angle),
-                y: shape.y - radius * Math.sin(angle)
+                x: shape.x - radius * Math.cos(radians),
+                y: shape.y - radius * Math.sin(radians)
             };
         }
 
@@ -86,11 +86,11 @@ export class Protractor {
         ctx.fillStyle = DEGREE_ANNOTATIONS_FILL_STYLE;
         ctx.font = DEGREE_ANNOTATIONS_TEXT_SIZE + 'px Helvetica';
 
-        for (let angle=0; angle < 2*Math.PI; angle += Math.PI/8) {
+        for (let radians=0; radians < 2*Math.PI; radians += Math.PI/8) {
             ctx.beginPath();
-            ctx.fillText((angle * 180 / Math.PI).toFixed(0),
-                shape.x + Math.cos(angle) * (radius - TICK_WIDTH*2),
-                shape.y + Math.sin(angle) * (radius - TICK_WIDTH*2));
+            ctx.fillText((radians * 180 / Math.PI).toFixed(0),
+                shape.x + Math.cos(radians) * (radius - TICK_WIDTH*2),
+                shape.y + Math.sin(radians) * (radius - TICK_WIDTH*2));
 
         }
         ctx.restore();
@@ -103,22 +103,22 @@ export class Protractor {
 
         ctx.save();
 
-        for (let angle = 0, cnt = 0; angle < ANGLE_MAX; angle += ANGLE_DELTA, ++cnt) {
+        for (let radians = 0, cnt = 0; radians < ANGLE_MAX; radians += ANGLE_DELTA, ++cnt) {
             ctx.beginPath();
 
             if (cnt % 4 === 0) {
-                ctx.moveTo(shape.x + Math.cos(angle) * (radius - TICK_WIDTH),
-                    shape.y + Math.sin(angle) * (radius - TICK_WIDTH));
-                ctx.lineTo(shape.x + Math.cos(angle) * (radius),
-                    shape.y + Math.sin(angle) * (radius));
+                ctx.moveTo(shape.x + Math.cos(radians) * (radius - TICK_WIDTH),
+                    shape.y + Math.sin(radians) * (radius - TICK_WIDTH));
+                ctx.lineTo(shape.x + Math.cos(radians) * (radius),
+                    shape.y + Math.sin(radians) * (radius));
                 ctx.strokeStyle = TICK_LONG_STROKE_STYLE;
                 ctx.stroke();
             }
             else {
-                ctx.moveTo(shape.x + Math.cos(angle) * (radius - TICK_WIDTH/2),
-                    shape.y + Math.sin(angle) * (radius - TICK_WIDTH/2));
-                ctx.lineTo(shape.x + Math.cos(angle) * (radius),
-                    shape.y + Math.sin(angle) * (radius));
+                ctx.moveTo(shape.x + Math.cos(radians) * (radius - TICK_WIDTH/2),
+                    shape.y + Math.sin(radians) * (radius - TICK_WIDTH/2));
+                ctx.lineTo(shape.x + Math.cos(radians) * (radius),
+                    shape.y + Math.sin(radians) * (radius));
                 ctx.strokeStyle = TICK_SHORT_STROKE_STYLE;
                 ctx.stroke();
             }
