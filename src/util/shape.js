@@ -203,18 +203,26 @@ export class Line extends Shape {
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
     rotate(radians) {
-        let { ctx, endX, endY, x, y, radius } = this;
+        let { ctx, endX, endY, x, y } = this;
         let tx = this.x,
             ty = this.y,
             tEnxX = endX,
             tEndY = endY;
         ctx.save();
 
-        ctx.translate(tx, ty);
+/*        // ctx.translate(tx, ty);
+        ctx.transform(1,0,0,1,tx, ty);
 
         if (radians) {
-            ctx.rotate(radians);
-        }
+            let sin = Math.sin(radians),
+                cos = Math.cos(radians)
+
+            // ctx.rotate(radians);
+            ctx.transform(cos, sin, -sin, cos, 0, 0);
+        }*/
+        let sin = Math.sin(radians),
+            cos = Math.cos(radians)
+        ctx.transform(cos, sin, -sin, cos, tx, ty);
 
         this.x = 0;
         this.y = 0;
@@ -228,8 +236,6 @@ export class Line extends Shape {
         this.y = ty;
         this.endX = tEnxX;
         this.endY = tEndY;
-/*        this.endX = Math.cos(radians) * radius;
-        this.endY = Math.sin(radians) * radius;*/
     }
     createPath() {
         let { x, y, endX, endY, ctx } = this;

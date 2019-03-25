@@ -122,6 +122,7 @@ export default {
     },
     mounted() {
         this.getContext();
+        this.setCanvasSize();
         this.drawRubberbandLines();
     },
     watch: {
@@ -141,6 +142,11 @@ export default {
         }
     },
     methods: {
+        setCanvasSize() {
+            let { canvas } = this;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        },
         stopRotatingShape(loc) {
             let { selectedShape, rotatingLockRadians } = this;
             let radians = Math.atan((loc.y - selectedShape.y) /
