@@ -148,12 +148,12 @@
                     case 'drag':
                     case 'edit':
                     case 'rotate':
+                    case 'erase':
                         canvas.style.cursor = 'pointer';
                         break;
                     case 'normal':
                         canvas.style.cursor = 'crosshair';
                         break;
-
                 }
             }
         },

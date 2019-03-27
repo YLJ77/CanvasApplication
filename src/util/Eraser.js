@@ -60,6 +60,8 @@ export class Eraser {
         ctx.save();
 
         this.setErasePath(loc);
+        ctx.fillStyle = 'white';
+        ctx.fill();
         drawGrid({ctx, color: GRID_LINE_COLOR, stepx: GRID_HORIZONTAL_SPACING, stepy: GRID_VERTICAL_SPACING});
 
         ctx.restore();
@@ -68,11 +70,9 @@ export class Eraser {
         let { ctx } = this;
         ctx.save();
 
-        // this.setEraserAttributes();
+        this.setEraserAttributes();
         this.setDrawPath(loc);
-        ctx.fillStyle = 'white';
-        ctx.fill();
-        // ctx.stroke();
+        ctx.stroke();
 
         ctx.restore();
     }
