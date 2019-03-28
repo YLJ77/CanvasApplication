@@ -85,6 +85,8 @@ export class Protractor {
         ctx.save();
         ctx.fillStyle = DEGREE_ANNOTATIONS_FILL_STYLE;
         ctx.font = DEGREE_ANNOTATIONS_TEXT_SIZE + 'px Helvetica';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
         for (let radians=0; radians < 2*Math.PI; radians += Math.PI/8) {
             ctx.beginPath();
