@@ -103,6 +103,7 @@
     import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
     import { Protractor } from '../util/Protractor'
     import { Eraser } from '../util/Eraser'
+    import testImg from '../assets/img/test.jpg'
 
     export default {
         data() {
@@ -158,6 +159,21 @@
             }
         },
         methods: {
+            test() {
+                let { ctx, canvas: { width, height } } = this;
+                let image = new Image();
+                image.src = testImg;
+                image.onload = () => {
+/*                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(300, 100, 100, 0, Math.PI * 2, false);
+                    ctx.clip();
+                    ctx.drawImage(image, 0, 0, 100, 100);
+                    ctx.restore();*/
+                    // ctx.drawImage(image, 0, 0, 500, 400, 100, 100, 400, 300);
+                    ctx.drawImage(image, 0, 0, width, height);
+                };
+            },
             setCanvasSize() {
                 let { canvas } = this;
                 canvas.width = window.innerWidth;
@@ -168,9 +184,8 @@
                 let radians = Math.atan((loc.y - selectedShape.y) /
                     (loc.x - selectedShape.x))
                     - rotatingLockRadians;
-
                 selectedShape.startRadians += radians;
-
+                selectedShape.updatePointAfterRotated();
                 this.rotatingShape = undefined;
                 this.rotatingLockEngaged = false;
                 this.rotatingLockRadians = 0;
@@ -255,7 +270,7 @@
                 ctx.strokeStyle = color;
                 drawGrid({ ctx, color: 'lightblue', stepx: 10, stepy: 10 });
             },
-            updateRubberbandRectradians({ loc }) {
+            updateRubberbandRect({ loc }) {
                 let {
                     rubberbandLine: {
                         rubberbandRect,
@@ -343,7 +358,7 @@
                 if (!dragging) shapes.push(line);
             },
             updateRubberband({ loc }) {
-                this.updateRubberbandRectradians({ loc });
+                this.updateRubberbandRect({ loc });
                 this.drawRubberbandShape({ loc });
             },
             getSelectedShape({ loc }) {

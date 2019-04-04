@@ -49,11 +49,17 @@ class Shape {
 
         ctx.save();
 
-        ctx.translate(tx, ty);
-
-        if (radians) {
-            ctx.rotate(radians);
-        }
+/*        ctx.translate(tx, ty);
+        ctx.rotate(radians);*/
+        let sin = Math.sin(radians),
+            cos = Math.cos(radians);
+        let currentTransform = {
+            a: cos,  c: -sin, e: tx,
+            b: sin, d: cos, f: ty
+        };
+        let { a, b, c, d, e, f } = currentTransform;
+        ctx.transform(a,b,c,d,e,f);
+        ctx.currentTransform = currentTransform;
 
         this.x = 0;
         this.y = 0;
@@ -64,10 +70,7 @@ class Shape {
         this.x = tx;
         this.y = ty;
     }
-    move(x, y) {
-        this.x = x;
-        this.y = y;
-    }
+    updatePointAfterRotated() {}
 }
 export class BezierCurve extends Shape {
     constructor({ ctx, pointRadius = 5, fillStyle, strokeStyle, endPoints, controlPoints }) {
@@ -202,6 +205,14 @@ export class Line extends Shape {
         this.startRadians = startRadians;
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
+    updatePointAfterRotated() {
+        let { ctx, endX, endY, x, y } = this;
+        let { currentTransform: { a, b, c, d, e, f } } = ctx;
+        endX -= x;
+        endY -= y;
+        this.endX = endX * a + endY * c + e;
+        this.endY = endX * b + endY * d + f;
+    }
     rotate(radians) {
         let { ctx, endX, endY, x, y } = this;
         let tx = this.x,
@@ -210,19 +221,15 @@ export class Line extends Shape {
             tEndY = endY;
         ctx.save();
 
-/*        // ctx.translate(tx, ty);
-        ctx.transform(1,0,0,1,tx, ty);
-
-        if (radians) {
-            let sin = Math.sin(radians),
-                cos = Math.cos(radians)
-
-            // ctx.rotate(radians);
-            ctx.transform(cos, sin, -sin, cos, 0, 0);
-        }*/
         let sin = Math.sin(radians),
-            cos = Math.cos(radians)
-        ctx.transform(cos, sin, -sin, cos, tx, ty);
+            cos = Math.cos(radians);
+        let currentTransform = {
+            a: cos,  c: -sin, e: tx,
+            b: sin, d: cos, f: ty
+        };
+        let { a, b, c, d, e, f } = currentTransform;
+        ctx.transform(a,b,c,d,e,f);
+        ctx.currentTransform = currentTransform;
 
         this.x = 0;
         this.y = 0;
