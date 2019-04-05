@@ -5,13 +5,14 @@ export class Point {
     }
 }
 class Shape {
-    constructor({ ctx, strokeStyle, fillStyle, filled }) {
+    constructor({ ctx, strokeStyle, fillStyle, filled, startRadians }) {
         this.ctx = ctx;
         this.strokeStyle = strokeStyle;
         this.fillStyle = fillStyle;
         this.filled = filled;
         this.type = new.target.name;
         this.offsets = null;
+        this.startRadians = startRadians || 0;
     }
     savePointOffset(loc) {
         let { x, y } = this;
@@ -42,15 +43,10 @@ class Shape {
         }
         ctx.restore();
     }
-    rotate(radians) {
-        let { ctx } = this;
-        let tx = this.x,
-            ty = this.y;
-
-        ctx.save();
-
-/*        ctx.translate(tx, ty);
-        ctx.rotate(radians);*/
+    setShapeTransform({ radians, tx, ty }) {
+        let { ctx, x, y } = this;
+        /*        ctx.translate(tx, ty);
+                ctx.rotate(radians);*/
         let sin = Math.sin(radians),
             cos = Math.cos(radians);
         let currentTransform = {
@@ -60,21 +56,27 @@ class Shape {
         let { a, b, c, d, e, f } = currentTransform;
         ctx.transform(a,b,c,d,e,f);
         ctx.currentTransform = currentTransform;
+    }
+    rotate(radians = 0) {
+        let { ctx, x, y } = this;
 
+        ctx.save();
+
+        this.setShapeTransform({ radians, tx: x, ty: y });
         this.x = 0;
         this.y = 0;
 
         this.draw();
         ctx.restore();
 
-        this.x = tx;
-        this.y = ty;
+        this.x = x;
+        this.y = y;
     }
     updatePointAfterRotated() {}
 }
 export class BezierCurve extends Shape {
-    constructor({ ctx, pointRadius = 5, fillStyle, strokeStyle, endPoints, controlPoints }) {
-        super({ ctx, strokeStyle, fillStyle, filled: false });
+    constructor({ ctx, pointRadius = 5, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
+        super({ ctx, strokeStyle, fillStyle, startRadians, filled: false });
         this.endPoints = JSON.parse(JSON.stringify(endPoints));
         this.controlPoints = JSON.parse(JSON.stringify(controlPoints));
         this.draggingPoint = null;
@@ -196,13 +198,12 @@ export class BezierCurve extends Shape {
     }
 }
 export class Line extends Shape {
-    constructor({ ctx, filled, strokeStyle, beginX, beginY, endX, endY, startRadians = 0 }) {
-        super({ ctx, strokeStyle, filled });
+    constructor({ ctx, filled, strokeStyle, beginX, beginY, endX, endY, startRadians }) {
+        super({ ctx, strokeStyle, filled, startRadians });
         this.x = beginX;
         this.y = beginY;
         this.endX = endX;
         this.endY = endY;
-        this.startRadians = startRadians;
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
     updatePointAfterRotated() {
@@ -213,36 +214,24 @@ export class Line extends Shape {
         this.endX = endX * a + endY * c + e;
         this.endY = endX * b + endY * d + f;
     }
-    rotate(radians) {
+    rotate(radians = 0) {
         let { ctx, endX, endY, x, y } = this;
-        let tx = this.x,
-            ty = this.y,
-            tEnxX = endX,
-            tEndY = endY;
         ctx.save();
 
-        let sin = Math.sin(radians),
-            cos = Math.cos(radians);
-        let currentTransform = {
-            a: cos,  c: -sin, e: tx,
-            b: sin, d: cos, f: ty
-        };
-        let { a, b, c, d, e, f } = currentTransform;
-        ctx.transform(a,b,c,d,e,f);
-        ctx.currentTransform = currentTransform;
+        this.setShapeTransform({ radians, tx: x, ty: y });
 
         this.x = 0;
         this.y = 0;
-        this.endX = endX - x;
-        this.endY = endY - y;
+        this.endX -= x;
+        this.endY -= y;
 
         this.draw();
         ctx.restore();
 
-        this.x = tx;
-        this.y = ty;
-        this.endX = tEnxX;
-        this.endY = tEndY;
+        this.x = x;
+        this.y = y;
+        this.endX = endX;
+        this.endY = endY;
     }
     createPath() {
         let { x, y, endX, endY, ctx } = this;
@@ -291,16 +280,44 @@ export class Circle extends Shape{
     }
 }
 export class RoundRect extends Shape {
-    constructor({ ctx, width, height, cornerRadius = 10, cornerX, cornerY, fillStyle, strokeStyle, filled }) {
-        super({ fillStyle, filled, strokeStyle, ctx });
+    constructor({ ctx, width, height, startRadians, cornerRadius = 10, cornerX, cornerY, fillStyle, strokeStyle, filled }) {
+        super({ fillStyle, filled, strokeStyle, startRadians, ctx });
+        this.x = width / 2 + cornerX;   // rotate center x | protractor center
+        this.y = height / 2 + cornerY;  // rotate center y
         this.cornerX = cornerX;
         this.cornerY = cornerY;
-        this.x = width / 2 + cornerX;
-        this.y = height / 2 + cornerY;
         this.cornerRadius = cornerRadius;
         this.width = width;
         this.height = height;
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+    }
+    rotate(radians = 0) {
+        let { ctx, width, height, cornerX, cornerY, x, y } = this;
+        ctx.save();
+
+        this.setShapeTransform({ radians, tx: x, ty: y });
+
+        this.x = 0;
+        this.y = 0;
+        this.cornerX = -width / 2;
+        this.cornerY = -height / 2;
+
+        this.draw();
+        ctx.restore();
+
+        this.x = x;
+        this.y = y;
+        this.cornerX = cornerX;
+        this.cornerY = cornerY;
+    }
+    updatePointAfterRotated() {
+        let { ctx, cornerX, cornerY, width, height } = this;
+        let { currentTransform: { a, b, c, d, e, f } } = ctx;
+        cornerX = -width / 2;
+        cornerY = -height / 2;
+        this.cornerX = cornerX * a + cornerY * c + e;
+        this.cornerY = cornerX * b + cornerY * d + f;
+        console.log(ctx.currentTransform);
     }
     savePointOffset(loc) {
         let { cornerX, cornerY } = this;
@@ -330,12 +347,11 @@ export class RoundRect extends Shape {
 export class Polygon extends Shape {
     constructor({ centerX, centerY, radius,
                     sides, startRadians, strokeStyle, fillStyle, filled, ctx }) {
-        super({ ctx, filled, fillStyle, strokeStyle });
+        super({ ctx, filled, fillStyle, strokeStyle, startRadians });
         this.x = centerX;
         this.y = centerY;
         this.radius = radius;
         this.sides = sides;
-        this.startRadians = startRadians;
     }
     getPoints() {
         let points = [],

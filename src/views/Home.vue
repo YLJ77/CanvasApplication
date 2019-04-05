@@ -44,10 +44,8 @@
                     <label for="edit-radio">编辑</label>
                     <input type="radio" id="edit-radio" v-model="mode" value="edit">
                 </template>
-                <template v-if="shape === 'Polygon'">
-                    <label for="rotate-radio">旋转</label>
-                    <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
-                </template>
+                <label for="rotate-radio">旋转</label>
+                <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
                 <label for="eraser-radio">橡皮擦</label>
                 <input type="radio" id="eraser-radio" v-model="mode" value="erase">
                 <label for="guidewireCheckbox">导线</label>
@@ -411,8 +409,7 @@
                 if (rotatingLockEngaged) {
                     let y = loc.y - rotatingShape.y;
                     let x = loc.x - rotatingShape.x;
-                    let radians = Math.atan( y /
-                        x) - rotatingLockRadians;
+                    let radians = Math.atan( y / x) - rotatingLockRadians;
                     if (x < 0 && y > 0 || x < 0 && y <= 0) {
                         radians = Math.PI + radians;
                     }
