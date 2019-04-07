@@ -21,7 +21,7 @@ class Shape {
         let offsetY = loc.y - y;
         this.offsets.push({ offsetX, offsetY });
     }
-    updatePoints(loc) {
+    updatePointsOnMoving(loc) {
         this.offsets.forEach(offset => {
             this.x = loc.x - offset.offsetX;
             this.y = loc.y - offset.offsetY;
@@ -44,7 +44,7 @@ class Shape {
         ctx.restore();
     }
     setShapeTransform({ radians, tx, ty }) {
-        let { ctx, x, y } = this;
+        let { ctx } = this;
         /*        ctx.translate(tx, ty);
                 ctx.rotate(radians);*/
         let sin = Math.sin(radians),
@@ -71,6 +71,14 @@ class Shape {
 
         this.x = x;
         this.y = y;
+    }
+    getTransformPointToScreenPoint({ x, y }) {
+        let { ctx } = this;
+        let { currentTransform: { a, b, c, d, e, f } } = ctx;
+        return {
+            x: x * a + y * c + e,
+            y: x * b + y * d + f
+        };
     }
     updatePointAfterRotated() {}
 }
@@ -133,7 +141,7 @@ export class BezierCurve extends Shape {
             this.offsets.push({ offsetX, offsetY });
         });
     }
-    updatePoints(loc) {
+    updatePointsOnMoving(loc) {
         let { endPoints, controlPoints, offsets } = this;
         endPoints.concat(controlPoints).forEach((point, index) => {
             point.x = loc.x - offsets[index].offsetX;
@@ -191,7 +199,7 @@ export class BezierCurve extends Shape {
             }
         }
     }
-    updateDraggingPoint(loc) {
+    updatePointOnEditing(loc) {
         let { draggingPoint } = this;
         draggingPoint.x = loc.x;
         draggingPoint.y = loc.y;
@@ -207,12 +215,12 @@ export class Line extends Shape {
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
     }
     updatePointAfterRotated() {
-        let { ctx, endX, endY, x, y } = this;
-        let { currentTransform: { a, b, c, d, e, f } } = ctx;
+        let { endX, endY, x, y } = this;
         endX -= x;
         endY -= y;
-        this.endX = endX * a + endY * c + e;
-        this.endY = endX * b + endY * d + f;
+        let point = this.getTransformPointToScreenPoint({ x: endX, y: endY });
+        this.endX = point.x;
+        this.endY = point.y;
     }
     rotate(radians = 0) {
         let { ctx, endX, endY, x, y } = this;
@@ -245,7 +253,7 @@ export class Line extends Shape {
         this.offsets.push({ offsetX: loc.x - x, offsetY: loc.y - y });
         this.offsets.push({ offsetX: loc.x - endX, offsetY: loc.y - endY });
     }
-    updatePoints(loc) {
+    updatePointsOnMoving(loc) {
         let { offsets } = this;
         this.x = loc.x - offsets[0].offsetX;
         this.y = loc.y - offsets[0].offsetY;
@@ -290,17 +298,61 @@ export class RoundRect extends Shape {
         this.width = width;
         this.height = height;
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+        this.setControlPoint();
+    }
+    setControlPoint() {
+        let { cornerX, cornerY, cornerRadius, width, height } = this;
+        let basePointX = cornerX + cornerRadius;
+        let controlPointX = cornerX + width;
+        let controlPointY = cornerY + height;
+        this.controlPoint = [
+            {
+                x: basePointX,
+                y: cornerY
+            },
+            {
+                cx1: controlPointX,
+                cy1: cornerY,
+                cx2: controlPointX,
+                cy2: controlPointY,
+                radius: cornerRadius
+            },
+            {
+                cx1: controlPointX,
+                cy1: controlPointY,
+                cx2: cornerX,
+                cy2: controlPointY,
+                radius: cornerRadius
+            },
+            {
+                cx1: cornerX,
+                cy1: controlPointY,
+                cx2: cornerX,
+                cy2: cornerY,
+                radius: cornerRadius
+            },
+            {
+                cx1: cornerX,
+                cy1: cornerY,
+                cx2: basePointX,
+                cy2: cornerY,
+                radius: cornerRadius
+            },
+        ];
     }
     rotate(radians = 0) {
         let { ctx, width, height, cornerX, cornerY, x, y } = this;
+        let tCornerX = -width / 2,
+            tCornerY = -height / 2;
         ctx.save();
 
         this.setShapeTransform({ radians, tx: x, ty: y });
 
         this.x = 0;
         this.y = 0;
-        this.cornerX = -width / 2;
-        this.cornerY = -height / 2;
+        this.cornerX = tCornerX;
+        this.cornerY = tCornerY;
+        this.setControlPoint();
 
         this.draw();
         ctx.restore();
@@ -311,35 +363,77 @@ export class RoundRect extends Shape {
         this.cornerY = cornerY;
     }
     updatePointAfterRotated() {
-        let { ctx, cornerX, cornerY, width, height } = this;
-        let { currentTransform: { a, b, c, d, e, f } } = ctx;
-        cornerX = -width / 2;
-        cornerY = -height / 2;
-        this.cornerX = cornerX * a + cornerY * c + e;
-        this.cornerY = cornerX * b + cornerY * d + f;
-        console.log(ctx.currentTransform);
+        let { cornerRadius, width, height, controlPoint } = this;
+        let tCornerX = -width / 2,
+            tCornerY = -height / 2;
+        let tBasePointX = tCornerX + cornerRadius;
+        let tControlPointX = tCornerX + width;
+        let tControlPointY = tCornerY + height;
+        let tPoints = [];
+        controlPoint.forEach((entry, index) => {
+            let basePoint, controlPoint1, controlPoint2;
+            switch (index) {
+                case 0:
+                    basePoint = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY });
+                    break;
+                case 1:
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tCornerY });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY });
+                    break;
+                case 2:
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY });
+                    break;
+                case 3:
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY });
+                    this.cornerX = controlPoint2.x;
+                    this.cornerY = controlPoint2.y;
+                    break;
+                case 4:
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY });
+                    break;
+            }
+            if (index === 0) {
+                tPoints.push({ x: basePoint.x, y: basePoint.y });
+            } else {
+                tPoints.push({
+                    cx1: controlPoint1.x,
+                    cy1: controlPoint1.y,
+                    cx2: controlPoint2.x,
+                    cy2: controlPoint2.y,
+                    radius: cornerRadius
+                });
+            }
+            this.controlPoint = tPoints;
+        });
     }
     savePointOffset(loc) {
         let { cornerX, cornerY } = this;
-        this.offsets = [];
         let offsetX = loc.x -cornerX;
         let offsetY = loc.y - cornerY;
-        this.offsets.push({ offsetX, offsetY });
+        this.offsets = [{ offsetX, offsetY }];
     }
-    updatePoints(loc) {
+    updatePointsOnMoving(loc) {
         this.offsets.forEach(offset => {
             this.cornerX = loc.x - offset.offsetX;
             this.cornerY = loc.y - offset.offsetY;
-        })
+        });
+        let { width, height, cornerX, cornerY } = this;
+        this.x = width / 2 + cornerX;   // rotate center x | protractor center
+        this.y = height / 2 + cornerY;  // rotate center y
+        this.setControlPoint({ cornerX, cornerY });
     }
     createPath() {
-        let { ctx, width, height, cornerRadius, cornerX, cornerY } = this;
+        let { ctx, controlPoint } = this;
+        let [ basePoint, ...cPoint ] = controlPoint;
         ctx.beginPath();
-        ctx.moveTo(cornerX + cornerRadius, cornerY);
-        ctx.arcTo(cornerX + width, cornerY, cornerX + width, cornerY + height, cornerRadius);
-        ctx.arcTo(cornerX + width, cornerY + height, cornerX, cornerY + height, cornerRadius);
-        ctx.arcTo(cornerX, cornerY + height, cornerX, cornerY, cornerRadius);
-        ctx.arcTo(cornerX, cornerY, cornerX + cornerRadius, cornerY, cornerRadius);
+        ctx.moveTo(basePoint.x, basePoint.y);
+        cPoint.forEach(point => {
+            let { cx1, cy1, cx2, cy2, radius } = point;
+            ctx.arcTo(cx1, cy1, cx2, cy2, radius);
+        });
         ctx.closePath();
     }
 

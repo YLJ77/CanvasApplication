@@ -477,10 +477,10 @@
                 if (dragging) {
                     switch (mode) {
                         case 'drag':
-                            selectedShape && selectedShape.updatePoints(loc);
+                            selectedShape && selectedShape.updatePointsOnMoving(loc);
                             break;
                         case 'edit':
-                            selectedShape && selectedShape.updateDraggingPoint(loc);
+                            selectedShape && selectedShape.updatePointOnEditing(loc);
                             break;
                         case 'erase':
                             eraser.eraseLast({ x: mousedown.x, y: mousedown.y });
