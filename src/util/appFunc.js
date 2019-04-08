@@ -1,7 +1,7 @@
-function drawPoint({ x, y, radius = 5, ctx }) {
+export function drawPoint({ x, y, radius = 5, ctx, color = 'red' }) {
     ctx.save();
     ctx.beginPath();
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = color;
     ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
     ctx.fill();
     ctx.restore();

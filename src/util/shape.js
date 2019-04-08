@@ -1,3 +1,5 @@
+import { drawPoint } from "./appFunc";
+
 export class Point {
     constructor(x, y) {
         this.x = x;
@@ -32,7 +34,7 @@ class Shape {
         this.createPath();
     }
     draw() {
-        let { ctx, filled } = this;
+        let { ctx, filled, _debugger, drawDebuggerPoint } = this;
         ctx.save();
         this.createPath(ctx);
         ctx.strokeStyle = this.strokeStyle;
@@ -42,6 +44,9 @@ class Shape {
             ctx.fill();
         }
         ctx.restore();
+        if (drawDebuggerPoint && _debugger) {
+            this.drawDebuggerPoint();
+        }
     }
     setShapeTransform({ radians, tx, ty }) {
         let { ctx } = this;
@@ -301,6 +306,7 @@ export class RoundRect extends Shape {
         this.height = height;
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
         this.isRotated = false;
+        this._debugger = false;
         this.setControlPoint();
     }
     setControlPoint() {
@@ -348,6 +354,7 @@ export class RoundRect extends Shape {
         let tCornerX = -width / 2,
             tCornerY = -height / 2;
         this.isRotated = true;
+        this.startRadians = radians;
         ctx.save();
 
         this.setShapeTransform({ radians, tx: x, ty: y });
@@ -391,8 +398,6 @@ export class RoundRect extends Shape {
                 case 3:
                     controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY, tx, ty });
                     controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY, tx, ty });
-                    this.cornerX = controlPoint2.x;
-                    this.cornerY = controlPoint2.y;
                     break;
                 case 4:
                     controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY, tx, ty });
@@ -443,6 +448,17 @@ export class RoundRect extends Shape {
             ctx.arcTo(cx1, cy1, cx2, cy2, radius);
         });
         ctx.closePath();
+    }
+    drawDebuggerPoint() {
+        let { ctx, controlPoint } = this;
+        let [ basePoint, ...cPoint ] = controlPoint;
+        let radius = 4;
+        drawPoint({ x: basePoint.x, y: basePoint.y, ctx, radius });
+        cPoint.forEach(point => {
+            let { cx1, cy1, cx2, cy2 } = point;
+            drawPoint({ x: cx1, y: cy1, ctx, color: 'green', radius });
+            drawPoint({ x: cx2, y: cy2, ctx, color: 'yellow', radius });
+        });
     }
 
 }
