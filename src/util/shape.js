@@ -92,14 +92,49 @@ class Shape {
 export class BezierCurve extends Shape {
     constructor({ ctx, pointRadius = 5, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
         super({ ctx, strokeStyle, fillStyle, startRadians, filled: false });
-        this.endPoints = JSON.parse(JSON.stringify(endPoints));
-        this.controlPoints = JSON.parse(JSON.stringify(controlPoints));
+        this.endPoints = endPoints;
+        this.controlPoints = controlPoints;
         this.draggingPoint = null;
         this.pointRadius = pointRadius;
+        this.setCenter();
+    }
+    setCenter() {
         let { width, height, x: minX, y: minY } = this.getRectInfo();
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
         this.x = width / 2 + minX;
         this.y = height / 2 + minY;
+    }
+    rotate(radians = 0) {
+        let { ctx, x, y, endPoints, controlPoints } = this;
+        let tEndPonts = JSON.parse(JSON.stringify(endPoints));
+        let tControlPoints = JSON.parse(JSON.stringify(controlPoints));
+        ctx.save();
+        this.startRadians = radians;
+        this.setShapeTransform({ radians, tx: x, ty: y });
+        this.x = 0;
+        this.y = 0;
+        endPoints.concat(controlPoints).forEach(point => {
+           point.x -= x;
+           point.y -= y;
+        });
+        this.draw();
+        ctx.restore();
+
+        this.x = x;
+        this.y = y;
+        this.endPoints = tEndPonts;
+        this.controlPoints = tControlPoints;
+    }
+    updatePointAfterRotated() {
+        let { endPoints, controlPoints, x: centerX, y: centerY } = this;
+        endPoints.concat(controlPoints).forEach(point => {
+            let { x, y } = point;
+            x -= centerX;
+            y -= centerY;
+            let tPoint = this.getTransformPointToScreenPoint({ x, y });
+            point.x = tPoint.x;
+            point.y = tPoint.y;
+        });
     }
     stroke({ filled = false } = {}) {
         let { ctx, strokeStyle, fillStyle } = this;

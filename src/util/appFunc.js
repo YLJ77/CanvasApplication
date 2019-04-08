@@ -1,3 +1,12 @@
+export function copyObj({ obj, exclusiveKey }) {
+    obj = Object.assign( Object.create( Object.getPrototypeOf(obj)), obj);
+    Object.keys(obj).forEach(key => {
+        if (!exclusiveKey.includes(key) && typeof obj[key] === 'object') {
+            obj[key] = JSON.parse(JSON.stringify(obj[key]));
+        }
+    });
+    return obj;
+}
 export function drawPoint({ x, y, radius = 5, ctx, color = 'red' }) {
     ctx.save();
     ctx.beginPath();

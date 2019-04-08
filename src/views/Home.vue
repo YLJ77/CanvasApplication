@@ -97,7 +97,7 @@
 </style>
 
 <script>
-    import { drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
+    import { copyObj, drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
     import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
     import { Protractor } from '../util/Protractor'
     import { Eraser } from '../util/Eraser'
@@ -126,8 +126,6 @@
                 mode: 'normal',
                 selectedShape: null,
                 draggingPoint: false, // End- or control point user is dragging
-                endPoints: [ {}, {} ], // Endpoint locations (x, y)
-                controlPoints: [ {}, {} ], // Control point locations (x, y)
                 rotatingLockEngaged: false,
                 rotatingLockRadians: 0,
                 rotatingShape: null,
@@ -204,22 +202,29 @@
                 });
             },
             drawBezierCurve() {
-                this.updateEndAndControlPoints();
-                let { ctx, shapes, rubberbandLine: { dragging }, color, endPoints, controlPoints } = this;
+                let { endPoints, controlPoints } = this.getEndAndControlPoints();
+                let { ctx, shapes, rubberbandLine: { dragging }, color } = this;
                 let curve = new BezierCurve({ ctx, strokeStyle: color, fillStyle: color, endPoints, controlPoints });
                 curve.draw();
                 if (!dragging) shapes.push(curve);
             },
-            updateEndAndControlPoints() {
-                let { endPoints, controlPoints, rubberbandLine: { rubberbandRect } } = this;
-                endPoints[0].x = rubberbandRect.left;
-                endPoints[0].y = rubberbandRect.top;
-                endPoints[1].x = rubberbandRect.left + rubberbandRect.width;
-                endPoints[1].y = rubberbandRect.top + rubberbandRect.height;
-                controlPoints[0].x = rubberbandRect.left;
-                controlPoints[0].y = rubberbandRect.top + rubberbandRect.height;
-                controlPoints[1].x = rubberbandRect.left + rubberbandRect.width;
-                controlPoints[1].y = rubberbandRect.top;
+            getEndAndControlPoints() {
+                let endPoints = [ {}, {} ], // Endpoint locations (x, y)
+                    controlPoints =  [ {}, {} ]; // Control point locations (x, y)
+                let { rubberbandLine: { rubberbandRect } } = this;
+                let { left, top, width, height } = rubberbandRect;
+                endPoints[0].x = left;
+                endPoints[0].y = top;
+                endPoints[1].x = left + width;
+                endPoints[1].y = top + height;
+                controlPoints[0].x = left;
+                controlPoints[0].y = top + height;
+                controlPoints[1].x = left + width;
+                controlPoints[1].y = top;
+                return {
+                    endPoints,
+                    controlPoints
+                }
             },
             drawPolygon() {
                 let {
@@ -382,7 +387,7 @@
                                 shape.savePointOffset(loc);
                                 break;
                             case 'rotate':
-                                this.rotatingShape = Object.assign( Object.create( Object.getPrototypeOf(shape)), shape);
+                                this.rotatingShape = copyObj({ obj: shape, exclusiveKey: ['ctx'] });
                                 break;
                         }
                         break;
@@ -517,7 +522,8 @@
                         mousedown
                     },
                     mode,
-                    eraser
+                    eraser,
+                    selectedShape
                 } = this;
                 let { clientX: x, clientY: y } = e;
                 let loc = windowToCanvas({ x, y, canvas });
@@ -529,6 +535,17 @@
                         break;
                     case 'erase':
                         eraser.eraseLast(mousedown);
+                        break;
+                    case 'edit':
+                    case 'drag':
+                        if (selectedShape) {
+                            let { type } = selectedShape;
+                            switch (type) {
+                                case 'BezierCurve':
+                                    selectedShape.setCenter();
+                                    break;
+                            }
+                        }
                         break;
                 }
             },
