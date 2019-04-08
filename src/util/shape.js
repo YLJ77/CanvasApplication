@@ -61,7 +61,7 @@ class Shape {
         let { ctx, x, y } = this;
 
         ctx.save();
-
+        this.startRadians = radians;
         this.setShapeTransform({ radians, tx: x, ty: y });
         this.x = 0;
         this.y = 0;
@@ -72,9 +72,11 @@ class Shape {
         this.x = x;
         this.y = y;
     }
-    getTransformPointToScreenPoint({ x, y }) {
+    getTransformPointToScreenPoint({ x, y, tx, ty }) {
         let { ctx } = this;
         let { currentTransform: { a, b, c, d, e, f } } = ctx;
+        if (tx !== undefined) e = tx;
+        if (ty !== undefined) f = ty;
         return {
             x: x * a + y * c + e,
             y: x * b + y * d + f
@@ -298,6 +300,7 @@ export class RoundRect extends Shape {
         this.width = width;
         this.height = height;
         this.radius = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+        this.isRotated = false;
         this.setControlPoint();
     }
     setControlPoint() {
@@ -344,6 +347,7 @@ export class RoundRect extends Shape {
         let { ctx, width, height, cornerX, cornerY, x, y } = this;
         let tCornerX = -width / 2,
             tCornerY = -height / 2;
+        this.isRotated = true;
         ctx.save();
 
         this.setShapeTransform({ radians, tx: x, ty: y });
@@ -362,7 +366,7 @@ export class RoundRect extends Shape {
         this.cornerX = cornerX;
         this.cornerY = cornerY;
     }
-    updatePointAfterRotated() {
+    updatePointAfterRotated({ tx, ty } = {}) {
         let { cornerRadius, width, height, controlPoint } = this;
         let tCornerX = -width / 2,
             tCornerY = -height / 2;
@@ -374,25 +378,25 @@ export class RoundRect extends Shape {
             let basePoint, controlPoint1, controlPoint2;
             switch (index) {
                 case 0:
-                    basePoint = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY });
+                    basePoint = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY, tx, ty });
                     break;
                 case 1:
-                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tCornerY });
-                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY });
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tCornerY, tx, ty });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY, tx, ty });
                     break;
                 case 2:
-                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY });
-                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY });
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tControlPointX, y: tControlPointY, tx, ty });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY, tx, ty });
                     break;
                 case 3:
-                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY });
-                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY });
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tControlPointY, tx, ty });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY, tx, ty });
                     this.cornerX = controlPoint2.x;
                     this.cornerY = controlPoint2.y;
                     break;
                 case 4:
-                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY });
-                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY });
+                    controlPoint1 = this.getTransformPointToScreenPoint({ x: tCornerX, y: tCornerY, tx, ty });
+                    controlPoint2 = this.getTransformPointToScreenPoint({ x: tBasePointX, y: tCornerY, tx, ty });
                     break;
             }
             if (index === 0) {
@@ -420,10 +424,14 @@ export class RoundRect extends Shape {
             this.cornerX = loc.x - offset.offsetX;
             this.cornerY = loc.y - offset.offsetY;
         });
-        let { width, height, cornerX, cornerY } = this;
+        let { width, height, cornerX, cornerY, isRotated } = this;
         this.x = width / 2 + cornerX;   // rotate center x | protractor center
         this.y = height / 2 + cornerY;  // rotate center y
-        this.setControlPoint({ cornerX, cornerY });
+        if (isRotated) {
+            this.updatePointAfterRotated({ tx: this.x, ty: this.y });
+        } else {
+            this.setControlPoint({ cornerX, cornerY });
+        }
     }
     createPath() {
         let { ctx, controlPoint } = this;

@@ -183,6 +183,7 @@
                     (loc.x - selectedShape.x))
                     - rotatingLockRadians;
                 selectedShape.startRadians += radians;
+                selectedShape.isRotated = true;
                 selectedShape.updatePointAfterRotated();
                 this.rotatingShape = undefined;
                 this.rotatingLockEngaged = false;
@@ -385,6 +386,8 @@
                                 break;
                         }
                         break;
+                    } else {
+                        this.selectedShape = null;
                     }
                 }
             },
