@@ -1,4 +1,4 @@
-# test-canvas
+# drawing board / 画板
 
 ## Project setup
 ```

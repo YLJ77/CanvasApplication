@@ -152,6 +152,8 @@
                         canvas.style.cursor = 'crosshair';
                         break;
                 }
+                this.inactiveEditing();
+                this.redraw();
             }
         },
         methods: {
@@ -365,6 +367,16 @@
                 this.updateRubberbandRect({ loc });
                 this.drawRubberbandShape({ loc });
             },
+            inactiveEditing() {
+                let { shapes } = this;
+                shapes.forEach( shape => {
+                    shape.isEditing = false;
+                });
+            },
+            activeEditing({ shape }) {
+                shape.isEditing = true;
+                this.redraw();
+            },
             getSelectedShape({ loc }) {
                 let { shapes, ctx, mode } = this;
                 for (let shape of shapes) {
@@ -382,6 +394,7 @@
                             case 'edit':
                                 shape.getDraggingPoint(loc);
                                 shape.savePointOffset(loc);
+                                this.activeEditing({ shape });
                                 break;
                             case 'drag':
                                 shape.savePointOffset(loc);
@@ -462,6 +475,9 @@
                         }
                         break;
                 }
+                if (mode !== 'edit') {
+                    this.inactiveEditing();
+                }
             },
             onMouseMove(e) {
                 let {
@@ -488,7 +504,7 @@
                             selectedShape && selectedShape.updatePointsOnMoving(loc);
                             break;
                         case 'edit':
-                            selectedShape && selectedShape.updatePointOnEditing(loc);
+                            selectedShape && selectedShape.draggingPoint && selectedShape.updatePointOnEditing(loc);
                             break;
                         case 'erase':
                             eraser.eraseLast({ x: mousedown.x, y: mousedown.y });

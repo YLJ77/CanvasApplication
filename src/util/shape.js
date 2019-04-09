@@ -96,6 +96,7 @@ export class BezierCurve extends Shape {
         this.controlPoints = controlPoints;
         this.draggingPoint = null;
         this.pointRadius = pointRadius;
+        this.isEditing = false;
         this.setCenter();
     }
     setCenter() {
@@ -223,7 +224,7 @@ export class BezierCurve extends Shape {
         this.createRectPath();
     }
     draw() {
-        this.createPointPath({ isDraw: true });
+        this.isEditing && this.createPointPath({ isDraw: true });
         this.drawCurve();
     }
     getDraggingPoint(loc) {
