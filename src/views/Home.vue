@@ -40,10 +40,8 @@
                 <input type="radio" id="normal-radio" v-model="mode" value="normal">
                 <label for="drag-radio">拖拽</label>
                 <input type="radio" id="drag-radio" v-model="mode" value="drag">
-                <template v-if="shape === 'BezierCurve'">
-                    <label for="edit-radio">编辑</label>
-                    <input type="radio" id="edit-radio" v-model="mode" value="edit">
-                </template>
+                <label for="edit-radio">编辑</label>
+                <input type="radio" id="edit-radio" v-model="mode" value="edit">
                 <label for="rotate-radio">旋转</label>
                 <input type="radio" id="rotate-radio" v-model="mode" value="rotate">
                 <label for="eraser-radio">橡皮擦</label>
@@ -372,29 +370,25 @@
                 shapes.forEach( shape => {
                     shape.isEditing = false;
                 });
+                this.redraw();
             },
             activeEditing({ shape }) {
                 shape.isEditing = true;
                 this.redraw();
             },
             getSelectedShape({ loc }) {
-                let { shapes, ctx, mode } = this;
+                let { shapes, ctx, mode, selectedShape } = this;
                 for (let shape of shapes) {
-                    switch (mode) {
-                        case 'drag':
-                        case 'rotate':
-                            shape.createPath();
-                            break;
-                        case 'edit':
-                            shape.createEditPath();
-                    }
+                    shape.createPath();
                     if (ctx.isPointInPath(loc.x, loc.y)) {
-                        this.selectedShape = shape;
                         switch (mode) {
                             case 'edit':
-                                shape.getDraggingPoint(loc);
-                                shape.savePointOffset(loc);
-                                this.activeEditing({ shape });
+                                if (!selectedShape) {
+                                    this.activeEditing({ shape });
+                                } else {
+                                    shape.getDraggingPoint(loc);
+                                    shape.savePointOffset(loc);
+                                }
                                 break;
                             case 'drag':
                                 shape.savePointOffset(loc);
@@ -403,9 +397,11 @@
                                 this.rotatingShape = copyObj({ obj: shape, exclusiveKey: ['ctx'] });
                                 break;
                         }
+                        this.selectedShape = shape;
                         break;
                     } else {
                         this.selectedShape = null;
+                        this.inactiveEditing();
                     }
                 }
             },

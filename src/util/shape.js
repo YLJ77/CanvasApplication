@@ -15,6 +15,8 @@ class Shape {
         this.type = new.target.name;
         this.offsets = null;
         this.startRadians = startRadians || 0;
+        this.pointRadius = 5;
+        this.isEditing = false;
     }
     savePointOffset(loc) {
         let { x, y } = this;
@@ -31,7 +33,7 @@ class Shape {
     }
     createPath() {}
     createEditPath() {
-        this.createPath();
+        // this.createPath();
     }
     draw() {
         let { ctx, filled, _debugger, drawDebuggerPoint } = this;
@@ -87,16 +89,25 @@ class Shape {
             y: x * b + y * d + f
         };
     }
+    drawPath({ filled = false } = {}) {
+        let { ctx, strokeStyle, fillStyle } = this;
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.stroke();
+        if (filled) {
+            ctx.fillStyle = fillStyle;
+            ctx.fill();
+        }
+        ctx.restore();
+    }
     updatePointAfterRotated() {}
 }
 export class BezierCurve extends Shape {
-    constructor({ ctx, pointRadius = 5, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
+    constructor({ ctx, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
         super({ ctx, strokeStyle, fillStyle, startRadians, filled: false });
         this.endPoints = endPoints;
         this.controlPoints = controlPoints;
         this.draggingPoint = null;
-        this.pointRadius = pointRadius;
-        this.isEditing = false;
         this.setCenter();
     }
     setCenter() {
@@ -137,43 +148,36 @@ export class BezierCurve extends Shape {
             point.y = tPoint.y;
         });
     }
-    stroke({ filled = false } = {}) {
-        let { ctx, strokeStyle, fillStyle } = this;
-        ctx.save();
-        ctx.strokeStyle = strokeStyle;
-        ctx.stroke();
-        if (filled) {
-            ctx.fillStyle = fillStyle;
-            ctx.fill();
-        }
-        ctx.restore();
-    }
-    createPointPath({ isDraw = false } = {}) {
+    drawControlPoint() {
         let { endPoints, controlPoints, ctx, pointRadius } = this;
-        !isDraw && ctx.beginPath();
         endPoints.concat(controlPoints)
             .forEach(point => {
                 let { x, y } = point;
-                if (isDraw) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
-                    ctx.closePath();
-                    this.stroke({ filled: true });
-                } else {
-                    ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
-                }
+                ctx.beginPath();
+                ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+                this.drawPath({ filled: true });
             });
-        !isDraw && ctx.closePath();
+    }
+    createControlPointPath() {
+        let { endPoints, controlPoints, ctx, pointRadius } = this;
+        ctx.beginPath();
+        endPoints.concat(controlPoints)
+            .forEach(point => {
+                let { x, y } = point;
+                ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+            });
     }
     drawCurve() {
+        this.createCurvePath();
+        this.drawPath();
+    }
+    createCurvePath() {
         let { endPoints, controlPoints, ctx } = this;
         ctx.beginPath();
         ctx.moveTo(endPoints[0].x, endPoints[0].y);
         ctx.bezierCurveTo(controlPoints[0].x, controlPoints[0].y,
             controlPoints[1].x, controlPoints[1].y,
             endPoints[1].x, endPoints[1].y);
-        this.stroke();
-        ctx.closePath();
     }
     savePointOffset(loc) {
         let { endPoints, controlPoints } = this;
@@ -193,9 +197,9 @@ export class BezierCurve extends Shape {
     }
     createRectPath() {
         let { x, y, width, height } = this.getRectInfo();
-        let { ctx } = this;
+        let { ctx, pointRadius } = this;
         ctx.beginPath();
-        ctx.rect(x, y, width, height);
+        ctx.rect(x - pointRadius, y - pointRadius, width + pointRadius * 2, height + pointRadius * 2);
         ctx.closePath();
     }
     getRectInfo() {
@@ -218,13 +222,13 @@ export class BezierCurve extends Shape {
         }
     }
     createEditPath() {
-        this.createPointPath();
+        this.createControlPointPath();
     }
     createPath() {
         this.createRectPath();
     }
     draw() {
-        this.isEditing && this.createPointPath({ isDraw: true });
+        this.isEditing && this.drawControlPoint();
         this.drawCurve();
     }
     getDraggingPoint(loc) {
@@ -235,7 +239,6 @@ export class BezierCurve extends Shape {
             ctx.beginPath();
             ctx.arc(point.x, point.y,
                 radius, 0, Math.PI * 2, false);
-            ctx.closePath();
             if (ctx.isPointInPath(loc.x, loc.y)) {
                 this.draggingPoint = point;
                 break;
@@ -256,6 +259,28 @@ export class Line extends Shape {
         this.endX = endX;
         this.endY = endY;
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
+    }
+    createControlPointPath() {
+        let { x, y, endX, endY, ctx, pointRadius } = this;
+        let points = [{ x, y }, { x: endX, y: endY }];
+        ctx.beginPath();
+        points.forEach(point => {
+                let { x, y } = point;
+                ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+            });
+    }
+    drawControlPoint() {
+        let { x, y, endX, endY, ctx, pointRadius } = this;
+        let points = [{ x, y }, { x: endX, y: endY }];
+        points.forEach(point => {
+            let { x, y } = point;
+            ctx.beginPath();
+            ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
+            this.drawPath({ filled: true });
+        });
+    }
+    createEditPath() {
+        this.createControlPointPath();
     }
     updatePointAfterRotated() {
         let { endX, endY, x, y } = this;
@@ -303,17 +328,20 @@ export class Line extends Shape {
         this.endX = loc.x - offsets[1].offsetX;
         this.endY = loc.y - offsets[1].offsetY;
     }
-    draw() {
-        let { x, y, endX, endY, ctx, strokeStyle } = this;
-        ctx.save();
+    createLinePath() {
+        let { x, y, endX, endY, ctx } = this;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(endX, endY);
-        ctx.closePath();
-        ctx.strokeStyle = strokeStyle;
-        ctx.stroke();
-        ctx.restore();
-
+    }
+    drawLine() {
+        this.createLinePath();
+        this.drawPath();
+    }
+    draw() {
+        let { isEditing } = this;
+        isEditing && this.drawControlPoint();
+        this.drawLine();
     }
 }
 export class Circle extends Shape{
