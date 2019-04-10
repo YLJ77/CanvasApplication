@@ -135,6 +135,7 @@
             this.getContext();
             this.setCanvasSize();
             this.drawRubberbandLines();
+            window.shapes = this.shapes;
         },
         watch: {
             mode() {
@@ -357,7 +358,7 @@
                     shapes
                 } = this;
                 let { x: endX, y: endY } = loc;
-                let line = new Line({ ctx, strokeStyle: color, beginX, beginY, endX, endY, filled: false });
+                let line = new Line({ ctx, strokeStyle: color, fillStyle: color, beginX, beginY, endX, endY, filled: false });
                 line.draw();
                 if (!dragging) shapes.push(line);
             },
@@ -370,21 +371,22 @@
                 shapes.forEach( shape => {
                     shape.isEditing = false;
                 });
-                this.redraw();
             },
             activeEditing({ shape }) {
+                this.inactiveEditing();
                 shape.isEditing = true;
-                this.redraw();
             },
             getSelectedShape({ loc }) {
-                let { shapes, ctx, mode, selectedShape } = this;
+                let { shapes, ctx, mode } = this;
                 for (let shape of shapes) {
                     shape.createPath();
                     if (ctx.isPointInPath(loc.x, loc.y)) {
+                        this.selectedShape = shape;
                         switch (mode) {
                             case 'edit':
-                                if (!selectedShape) {
+                                if (!this.selectedShape.isEditing) {
                                     this.activeEditing({ shape });
+                                    this.redraw();
                                 } else {
                                     shape.getDraggingPoint(loc);
                                     shape.savePointOffset(loc);
@@ -397,11 +399,9 @@
                                 this.rotatingShape = copyObj({ obj: shape, exclusiveKey: ['ctx'] });
                                 break;
                         }
-                        this.selectedShape = shape;
                         break;
                     } else {
                         this.selectedShape = null;
-                        this.inactiveEditing();
                     }
                 }
             },
@@ -471,9 +471,14 @@
                         }
                         break;
                 }
-                if (mode !== 'edit') {
+                if (mode !== 'edit' && this.existEditingShap()) {
                     this.inactiveEditing();
+                    this.redraw();
                 }
+            },
+            existEditingShap() {
+                let { shapes } = this;
+                return shapes.some(shape => shape.isEditing);
             },
             onMouseMove(e) {
                 let {

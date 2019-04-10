@@ -17,6 +17,27 @@ class Shape {
         this.startRadians = startRadians || 0;
         this.pointRadius = 5;
         this.isEditing = false;
+        this.draggingPoint = null;
+        this.points = [];
+    }
+    getDraggingPoint(loc) {
+        let { points, ctx } = this;
+        let radius = 5;
+        for (let point of points) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y,
+                radius, 0, Math.PI * 2, false);
+            if (ctx.isPointInPath(loc.x, loc.y)) {
+                this.draggingPoint = point;
+                break;
+            }
+        }
+    }
+    updatePointOnEditing(loc) {
+        let { draggingPoint } = this;
+        draggingPoint.x = loc.x;
+        draggingPoint.y = loc.y;
+        this.setCenter();
     }
     savePointOffset(loc) {
         let { x, y } = this;
@@ -30,10 +51,6 @@ class Shape {
             this.x = loc.x - offset.offsetX;
             this.y = loc.y - offset.offsetY;
         })
-    }
-    createPath() {}
-    createEditPath() {
-        // this.createPath();
     }
     draw() {
         let { ctx, filled, _debugger, drawDebuggerPoint } = this;
@@ -101,13 +118,16 @@ class Shape {
         ctx.restore();
     }
     updatePointAfterRotated() {}
+    createPath() {}
+    createEditPath() {}
+    setCenter() {}
 }
 export class BezierCurve extends Shape {
     constructor({ ctx, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
         super({ ctx, strokeStyle, fillStyle, startRadians, filled: false });
         this.endPoints = endPoints;
         this.controlPoints = controlPoints;
-        this.draggingPoint = null;
+        this.points = [...this.endPoints, ...this.controlPoints];
         this.setCenter();
     }
     setCenter() {
@@ -117,15 +137,14 @@ export class BezierCurve extends Shape {
         this.y = height / 2 + minY;
     }
     rotate(radians = 0) {
-        let { ctx, x, y, endPoints, controlPoints } = this;
-        let tEndPonts = JSON.parse(JSON.stringify(endPoints));
-        let tControlPoints = JSON.parse(JSON.stringify(controlPoints));
+        let { ctx, x, y, points } = this;
+        let tPoint = JSON.parse(JSON.stringify(points));
         ctx.save();
         this.startRadians = radians;
         this.setShapeTransform({ radians, tx: x, ty: y });
         this.x = 0;
         this.y = 0;
-        endPoints.concat(controlPoints).forEach(point => {
+        points.forEach(point => {
            point.x -= x;
            point.y -= y;
         });
@@ -134,12 +153,11 @@ export class BezierCurve extends Shape {
 
         this.x = x;
         this.y = y;
-        this.endPoints = tEndPonts;
-        this.controlPoints = tControlPoints;
+        this.points = tPoint;
     }
     updatePointAfterRotated() {
-        let { endPoints, controlPoints, x: centerX, y: centerY } = this;
-        endPoints.concat(controlPoints).forEach(point => {
+        let { points, x: centerX, y: centerY } = this;
+        points.forEach(point => {
             let { x, y } = point;
             x -= centerX;
             y -= centerY;
@@ -149,9 +167,8 @@ export class BezierCurve extends Shape {
         });
     }
     drawControlPoint() {
-        let { endPoints, controlPoints, ctx, pointRadius } = this;
-        endPoints.concat(controlPoints)
-            .forEach(point => {
+        let { points, ctx, pointRadius } = this;
+        points.forEach(point => {
                 let { x, y } = point;
                 ctx.beginPath();
                 ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
@@ -159,10 +176,9 @@ export class BezierCurve extends Shape {
             });
     }
     createControlPointPath() {
-        let { endPoints, controlPoints, ctx, pointRadius } = this;
+        let { points, ctx, pointRadius } = this;
         ctx.beginPath();
-        endPoints.concat(controlPoints)
-            .forEach(point => {
+        points.forEach(point => {
                 let { x, y } = point;
                 ctx.arc(x, y, pointRadius, 0, 2 * Math.PI, false);
             });
@@ -172,25 +188,23 @@ export class BezierCurve extends Shape {
         this.drawPath();
     }
     createCurvePath() {
-        let { endPoints, controlPoints, ctx } = this;
+        let { points: [ e1, e2, c1, c2 ], ctx } = this;
         ctx.beginPath();
-        ctx.moveTo(endPoints[0].x, endPoints[0].y);
-        ctx.bezierCurveTo(controlPoints[0].x, controlPoints[0].y,
-            controlPoints[1].x, controlPoints[1].y,
-            endPoints[1].x, endPoints[1].y);
+        ctx.moveTo(e1.x, e1.y);
+        ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, e2.x, e2.y);
     }
     savePointOffset(loc) {
-        let { endPoints, controlPoints } = this;
+        let { points } = this;
         this.offsets = [];
-        endPoints.concat(controlPoints).forEach(point => {
+        points.forEach(point => {
             let offsetX = loc.x -point.x;
             let offsetY = loc.y - point.y;
             this.offsets.push({ offsetX, offsetY });
         });
     }
     updatePointsOnMoving(loc) {
-        let { endPoints, controlPoints, offsets } = this;
-        endPoints.concat(controlPoints).forEach((point, index) => {
+        let { points, offsets } = this;
+        points.forEach((point, index) => {
             point.x = loc.x - offsets[index].offsetX;
             point.y = loc.y - offsets[index].offsetY;
         });
@@ -204,10 +218,10 @@ export class BezierCurve extends Shape {
     }
     getRectInfo() {
         let minX, minY, maxX, maxY;
-        let { endPoints, controlPoints } = this;
+        let { points } = this;
         minX = minY = 100000;
         maxX = maxY = 0;
-        endPoints.concat(controlPoints).forEach( point => {
+        points.forEach( point => {
             let { x, y } = point;
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
@@ -231,38 +245,21 @@ export class BezierCurve extends Shape {
         this.isEditing && this.drawControlPoint();
         this.drawCurve();
     }
-    getDraggingPoint(loc) {
-        let { endPoints, controlPoints, ctx } = this;
-        let radius = 5;
-        let points = controlPoints.concat(endPoints);
-        for (let point of points) {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y,
-                radius, 0, Math.PI * 2, false);
-            if (ctx.isPointInPath(loc.x, loc.y)) {
-                this.draggingPoint = point;
-                break;
-            }
-        }
-    }
-    updatePointOnEditing(loc) {
-        let { draggingPoint } = this;
-        draggingPoint.x = loc.x;
-        draggingPoint.y = loc.y;
-    }
 }
 export class Line extends Shape {
-    constructor({ ctx, filled, strokeStyle, beginX, beginY, endX, endY, startRadians }) {
-        super({ ctx, strokeStyle, filled, startRadians });
-        this.x = beginX;
-        this.y = beginY;
-        this.endX = endX;
-        this.endY = endY;
+    constructor({ ctx, filled, fillStyle, strokeStyle, beginX, beginY, endX, endY, startRadians }) {
+        super({ ctx, strokeStyle, filled, fillStyle, startRadians });
         this.radius = Math.sqrt(Math.pow(Math.abs(beginX - endX), 2) + Math.pow(Math.abs(beginY-endY), 2));
+        this.points = [{ x: beginX, y: beginY }, { x: endX, y: endY } ];
+        this.setCenter();
+    }
+    setCenter() {
+        let { points: [ beginPoint ] } = this;
+        this.x = beginPoint.x;
+        this.y = beginPoint.y;
     }
     createControlPointPath() {
-        let { x, y, endX, endY, ctx, pointRadius } = this;
-        let points = [{ x, y }, { x: endX, y: endY }];
+        let { ctx, points, pointRadius } = this;
         ctx.beginPath();
         points.forEach(point => {
                 let { x, y } = point;
@@ -270,8 +267,7 @@ export class Line extends Shape {
             });
     }
     drawControlPoint() {
-        let { x, y, endX, endY, ctx, pointRadius } = this;
-        let points = [{ x, y }, { x: endX, y: endY }];
+        let { ctx, pointRadius, points } = this;
         points.forEach(point => {
             let { x, y } = point;
             ctx.beginPath();
@@ -283,56 +279,62 @@ export class Line extends Shape {
         this.createControlPointPath();
     }
     updatePointAfterRotated() {
-        let { endX, endY, x, y } = this;
-        endX -= x;
-        endY -= y;
-        let point = this.getTransformPointToScreenPoint({ x: endX, y: endY });
-        this.endX = point.x;
-        this.endY = point.y;
+        let { points: [ beginPoint, endPoint ] } = this;
+        endPoint.x -= beginPoint.x;
+        endPoint.y -= beginPoint.y;
+        let point = this.getTransformPointToScreenPoint({ x: endPoint.x, y: endPoint.y });
+        endPoint.x = point.x;
+        endPoint.y = point.y;
     }
     rotate(radians = 0) {
-        let { ctx, endX, endY, x, y } = this;
+        let { ctx, points: [ beginPoint, endPoint ], points } = this;
+        let { x, y } = beginPoint;
+        let tPoints = JSON.parse(JSON.stringify(points));
         ctx.save();
 
         this.setShapeTransform({ radians, tx: x, ty: y });
 
-        this.x = 0;
-        this.y = 0;
-        this.endX -= x;
-        this.endY -= y;
+        beginPoint.x = 0;
+        beginPoint.y = 0;
+        endPoint.x -= x;
+        endPoint.y -= y;
 
         this.draw();
         ctx.restore();
 
-        this.x = x;
-        this.y = y;
-        this.endX = endX;
-        this.endY = endY;
+        this.points = tPoints;
+    }
+    createRectPath() {
+        let { points: [ beginPoint, endPoint ], ctx, pointRadius } = this;
+        ctx.beginPath();
+        let minX = Math.min(beginPoint.x, endPoint.x) - pointRadius,
+            minY = Math.min(beginPoint.y, endPoint.y) - pointRadius,
+            width = Math.abs(beginPoint.x - endPoint.x) + 2 * pointRadius,
+            height = Math.abs(beginPoint.y - endPoint.y) + 2 * pointRadius;
+        ctx.rect(minX, minY, width, height);
     }
     createPath() {
-        let { x, y, endX, endY, ctx } = this;
-        ctx.beginPath();
-        ctx.rect(Math.min(x, endX), Math.min(y, endY), Math.abs(x - endX), Math.abs(y - endY));
-        ctx.closePath();
+        this.createRectPath();
     }
     savePointOffset(loc) {
-        let { x, y, endX, endY } = this;
+        let { points: [ beginPoint, endPoint ] } = this;
         this.offsets = [];
-        this.offsets.push({ offsetX: loc.x - x, offsetY: loc.y - y });
-        this.offsets.push({ offsetX: loc.x - endX, offsetY: loc.y - endY });
+        this.offsets.push({ offsetX: loc.x - beginPoint.x, offsetY: loc.y - beginPoint.y });
+        this.offsets.push({ offsetX: loc.x - endPoint.x, offsetY: loc.y - endPoint.y });
     }
     updatePointsOnMoving(loc) {
-        let { offsets } = this;
-        this.x = loc.x - offsets[0].offsetX;
-        this.y = loc.y - offsets[0].offsetY;
-        this.endX = loc.x - offsets[1].offsetX;
-        this.endY = loc.y - offsets[1].offsetY;
+        let { points: [ beginPoint, endPoint ], offsets } = this;
+        beginPoint.x = loc.x - offsets[0].offsetX;
+        beginPoint.y = loc.y - offsets[0].offsetY;
+        endPoint.x = loc.x - offsets[1].offsetX;
+        endPoint.y = loc.y - offsets[1].offsetY;
+        this.setCenter();
     }
     createLinePath() {
-        let { x, y, endX, endY, ctx } = this;
+        let { points: [ beginPoint, endPoint ], ctx } = this;
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(endX, endY);
+        ctx.moveTo(beginPoint.x, beginPoint.y);
+        ctx.lineTo(endPoint.x, endPoint.y);
     }
     drawLine() {
         this.createLinePath();
