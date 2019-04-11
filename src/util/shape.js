@@ -54,15 +54,8 @@ class Shape {
     }
     draw() {
         let { ctx, filled, _debugger, drawDebuggerPoint } = this;
-        ctx.save();
         this.createPath(ctx);
-        ctx.strokeStyle = this.strokeStyle;
-        ctx.stroke();
-        if (filled) {
-            ctx.fillStyle = this.fillStyle;
-            ctx.fill();
-        }
-        ctx.restore();
+        this.drawPath({ filled });
         if (drawDebuggerPoint && _debugger) {
             this.drawDebuggerPoint();
         }
@@ -80,21 +73,6 @@ class Shape {
         let { a, b, c, d, e, f } = currentTransform;
         ctx.transform(a,b,c,d,e,f);
         ctx.currentTransform = currentTransform;
-    }
-    rotate(radians = 0) {
-        let { ctx, x, y } = this;
-
-        ctx.save();
-        this.startRadians = radians;
-        this.setShapeTransform({ radians, tx: x, ty: y });
-        this.x = 0;
-        this.y = 0;
-
-        this.draw();
-        ctx.restore();
-
-        this.x = x;
-        this.y = y;
     }
     getTransformPointToScreenPoint({ x, y, tx, ty }) {
         let { ctx } = this;
@@ -536,6 +514,20 @@ export class Polygon extends Shape {
         this.y = centerY;
         this.radius = radius;
         this.sides = sides;
+    }
+    rotate(radians = 0) {
+        let { ctx, x, y } = this;
+
+        ctx.save();
+        this.setShapeTransform({ radians, tx: x, ty: y });
+        this.x = 0;
+        this.y = 0;
+
+        this.draw();
+        ctx.restore();
+
+        this.x = x;
+        this.y = y;
     }
     getPoints() {
         let points = [],
