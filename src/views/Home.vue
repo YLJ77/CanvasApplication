@@ -379,18 +379,15 @@
             getSelectedShape({ loc }) {
                 let { shapes, ctx, mode } = this;
                 for (let shape of shapes) {
+                    let draggingPoint = shape.getDraggingPoint(loc);
                     shape.createPath();
-                    if (ctx.isPointInPath(loc.x, loc.y)) {
+                    if (ctx.isPointInPath(loc.x, loc.y) || (mode === 'edit' && draggingPoint)) {
                         this.selectedShape = shape;
                         switch (mode) {
                             case 'edit':
-                                if (!this.selectedShape.isEditing) {
-                                    this.activeEditing({ shape });
-                                    this.redraw();
-                                } else {
-                                    shape.getDraggingPoint(loc);
-                                    shape.savePointOffset(loc);
-                                }
+                                this.activeEditing({ shape });
+                                this.redraw();
+                                shape.savePointOffset(loc);
                                 break;
                             case 'drag':
                                 shape.savePointOffset(loc);
@@ -402,6 +399,10 @@
                         break;
                     } else {
                         this.selectedShape = null;
+                        if (mode === 'edit') {
+                            this.inactiveEditing();
+                            this.redraw();
+                        }
                     }
                 }
             },
