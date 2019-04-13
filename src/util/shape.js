@@ -36,7 +36,7 @@ class Shape {
             point.x = loc.x - offsets[index].offsetX;
             point.y = loc.y - offsets[index].offsetY;
         });
-        this.setCenter();
+        this.setCenter(loc);
     }
     getRectInfo() {
         let minX, minY, maxX, maxY, width, height;
@@ -91,7 +91,7 @@ class Shape {
         let { draggingPoint } = this;
         draggingPoint.x = loc.x;
         draggingPoint.y = loc.y;
-        this.setCenter();
+        this.setCenter(loc);
     }
     draw() {
         let { ctx, filled, _debugger, drawDebuggerPoint } = this;
@@ -140,6 +140,7 @@ class Shape {
     updatePointAfterRotated() {}
     createPath() {}
     setCenter() {}
+    rotate() {}
 }
 export class BezierCurve extends Shape {
     constructor({ ctx, startRadians, fillStyle, strokeStyle, endPoints, controlPoints }) {
@@ -282,25 +283,62 @@ export class Circle extends Shape{
         this.x = centerX;
         this.y = centerY;
         this.radius = radius;
+        this.setPoints();
     }
-    savePointOffset(loc) {
-        let { x, y } = this;
-        this.offsets = [];
-        let offsetX = loc.x -x;
-        let offsetY = loc.y - y;
-        this.offsets.push({ offsetX, offsetY });
+    setPoints() {
+        let { x, y, radius } = this;
+        this.points = [
+            {
+                x,
+                y,
+                isCenter: true
+            },
+            {
+                x,
+                y: y - radius
+            },
+            {
+                x: x + radius,
+                y
+            },
+            {
+                x: x,
+                y: y + radius
+            },
+            {
+                x: x - radius,
+                y: y
+            }
+        ];
     }
-    updatePointsOnMoving(loc) {
-        this.offsets.forEach(offset => {
-            this.x = loc.x - offset.offsetX;
-            this.y = loc.y - offset.offsetY;
-        })
+    setCenter(loc) {
+        let { draggingPoint } = this;
+        if (draggingPoint) {
+            let { draggingPoint: { isCenter } } = this;
+            if (!isCenter) {
+                let { x, y } = this;
+                let offsetX = loc.x - x;
+                let offsetY = loc.y - y;
+                this.radius = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2));
+            } else {
+                let { draggingPoint: { x, y } } = this;
+                this.x = x;
+                this.y = y;
+            }
+            this.setPoints();
+        } else {
+            let { points: [ { x, y } ] } = this;
+            this.x = x;
+            this.y = y;
+        }
     }
-    createPath() {
-        let { ctx, x, y, radius } = this;
+    createCirclePath() {
+        let { ctx, points: [ { x, y } ], radius } = this;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI*2, false);
-        ctx.closePath();
+    }
+    createPath() {
+        this.createCirclePath();
     }
 }
 export class RoundRect extends Shape {
