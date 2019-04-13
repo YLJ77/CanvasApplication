@@ -32,8 +32,6 @@
             <li v-show="shape === 'Polygon'">
                 <label for="sides">边数</label>
                 <input type="text" id="sides" v-model="sides">
-                <label for="startRadians">开始角度</label>
-                <input type="text" id="startRadians" v-model="startRadians">
             </li>
             <li>
                 <label for="normal-radio">画图</label>
@@ -52,15 +50,6 @@
                 <input type="checkbox" id="checkbox" v-model="isFillColor">
                 <input @click="erase" id='eraseAllButton' type='button' value='擦除所有'/>
 
-            </li>
-            <li>
-                <label for="eraserWidth">橡皮擦宽度</label>
-                <input type="text" id="eraserWidth" v-model="eraserWidth">
-                <label for="eraser">橡皮擦类型</label>
-                <select id='eraser' v-model="eraserType">
-                    <option value='circle'>circle</option>
-                    <option value='square'>square</option>
-                </select>
             </li>
         </ul>
     </div>

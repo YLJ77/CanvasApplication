@@ -370,28 +370,24 @@ export class RoundRect extends Shape {
                 cy1: cornerY,
                 cx2: controlPointX,
                 cy2: controlPointY,
-                radius: cornerRadius
             },
             {
                 cx1: controlPointX,
                 cy1: controlPointY,
                 cx2: cornerX,
                 cy2: controlPointY,
-                radius: cornerRadius
             },
             {
                 cx1: cornerX,
                 cy1: controlPointY,
                 cx2: cornerX,
                 cy2: cornerY,
-                radius: cornerRadius
             },
             {
                 cx1: cornerX,
                 cy1: cornerY,
                 cx2: basePointX,
                 cy2: cornerY,
-                radius: cornerRadius
             },
         ];
     }
@@ -458,7 +454,6 @@ export class RoundRect extends Shape {
                     cy1: controlPoint1.y,
                     cx2: controlPoint2.x,
                     cy2: controlPoint2.y,
-                    radius: cornerRadius
                 });
             }
             this.controlPoint = tPoints;
@@ -484,14 +479,17 @@ export class RoundRect extends Shape {
             this.setControlPoint({ cornerX, cornerY });
         }
     }
+    updatePointOnEditing() {
+
+    }
     createPath() {
-        let { ctx, controlPoint } = this;
+        let { ctx, controlPoint, cornerRadius } = this;
         let [ basePoint, ...cPoint ] = controlPoint;
         ctx.beginPath();
         ctx.moveTo(basePoint.x, basePoint.y);
         cPoint.forEach(point => {
-            let { cx1, cy1, cx2, cy2, radius } = point;
-            ctx.arcTo(cx1, cy1, cx2, cy2, radius);
+            let { cx1, cy1, cx2, cy2 } = point;
+            ctx.arcTo(cx1, cy1, cx2, cy2, cornerRadius);
         });
         ctx.closePath();
     }
