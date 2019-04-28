@@ -145,3 +145,4 @@ export function drawAxes({ctx, canvas}) {
     drawHorizontalAxisTicks();
     ctx.restore();
 }
+
