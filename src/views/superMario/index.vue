@@ -11,9 +11,10 @@
 </style>
 
 <script>
-    import { SpriteSheet } from "./Class/SpriteSheet";
-    import tiles from '../../assets/img/tiles.png'
-    import { loadImage, loadLevel } from "./loaders";
+    import { loadLevel } from "./loaders";
+    import { loadBackgroundSprites, loadMarioSprites } from "./sprite";
+    import { Compositor } from "./Class/Compositor";
+    import { createBackgroundLayer, createSpriteLayer } from "./layers";
 
     export default {
         data() {
@@ -23,26 +24,28 @@
             }
         },
         methods: {
-            drawBackground(background, sprites) {
-                let { ctx } = this;
-                background.ranges.forEach(([x1, x2, y1, y2]) => {
-                    for(let x=x1; x<x2; ++x) {
-                        for (let y=y1; y<y2; ++y) {
-                            sprites.drawTile(background.tile, ctx, x, y);
-                        }
-                    }
-                })
-            },
             async draw() {
-                let image = await loadImage(tiles);
-                const sprites = new SpriteSheet(image, 16, 16);
-                sprites.define('ground', 0, 0);
-                sprites.define('sky', 3, 23);
-
+                let { ctx } = this;
+                let marioSprite = await loadMarioSprites(ctx);
+                let backgroundSprite = await loadBackgroundSprites(ctx);
                 let level = await loadLevel('1-1');
-                level.backgrounds.forEach(background => {
-                    this.drawBackground(background, sprites)
-                });
+                let comp = new Compositor();
+                const backgroundLayer = createBackgroundLayer(level.backgrounds, backgroundSprite)
+                comp.layers.push(backgroundLayer);
+                const pos = {
+                    x: 64,
+                    y: 64
+                };
+                const spriteLayer = createSpriteLayer(marioSprite, pos);
+                comp.layers.push(spriteLayer);
+                let update = () => {
+                    comp.draw(ctx);
+                    marioSprite.draw('idle', ctx, pos.x, pos.y);
+                    pos.x += 2;
+                    pos.y += 2;
+                    requestAnimationFrame(update);
+                };
+                update();
             },
             init() {
                 this.canvas = document.getElementById('screen');

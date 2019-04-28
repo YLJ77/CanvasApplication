@@ -5,17 +5,17 @@ export class SpriteSheet {
         this.height = height;
         this.tiles = new Map();
     }
-    define(name, x, y) {
+    define(name, x, y, width, height) {
+        let { image } = this;
         const buffer = document.createElement('canvas');
-        let { width, height, image } = this;
         buffer.width = width;
         buffer.height = height;
         buffer
             .getContext('2d')
             .drawImage(
                 image,
-                x * width,
-                y * height,
+                x,
+                y,
                 width,
                 height,
                 0,
@@ -24,6 +24,11 @@ export class SpriteSheet {
                 height
             );
         this.tiles.set(name, buffer);
+    }
+    defineTile(name, x, y) {
+        let { width, height } = this;
+        this.define(name, x * width, y * height, width, height);
+
     }
     draw(name, ctx, x, y) {
         const buffer = this.tiles.get(name);
