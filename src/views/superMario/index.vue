@@ -12,8 +12,9 @@
 
 <script>
     import { loadLevel } from "./loaders";
-    import { loadBackgroundSprites, loadMarioSprites } from "./sprite";
+    import { loadBackgroundSprites } from "./sprite";
     import { Compositor } from "./Class/Compositor";
+    import { createMario } from "./Class/entities";
     import { createBackgroundLayer, createSpriteLayer } from "./layers";
 
     export default {
@@ -26,23 +27,20 @@
         methods: {
             async draw() {
                 let { ctx } = this;
-                let marioSprite = await loadMarioSprites(ctx);
                 let backgroundSprite = await loadBackgroundSprites(ctx);
                 let level = await loadLevel('1-1');
                 let comp = new Compositor();
                 const backgroundLayer = createBackgroundLayer(level.backgrounds, backgroundSprite)
                 comp.layers.push(backgroundLayer);
-                const pos = {
-                    x: 64,
-                    y: 64
-                };
-                const spriteLayer = createSpriteLayer(marioSprite, pos);
+                const gravity = 0.5;
+                const mario = await createMario(ctx);
+                const spriteLayer = createSpriteLayer(mario);
                 comp.layers.push(spriteLayer);
                 let update = () => {
                     comp.draw(ctx);
-                    marioSprite.draw('idle', ctx, pos.x, pos.y);
-                    pos.x += 2;
-                    pos.y += 2;
+                    mario.draw(ctx);
+                    mario.update();
+                    mario.vel.y += gravity;
                     requestAnimationFrame(update);
                 };
                 update();

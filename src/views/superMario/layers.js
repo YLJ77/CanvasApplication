@@ -19,8 +19,8 @@ export  function createBackgroundLayer(backgrounds, sprites) {
     }
 }
 
-export function createSpriteLayer(sprite, pos) {
+export function createSpriteLayer(entity) {
     return function drawSpriteLayer(ctx) {
-        sprite.draw('idle', ctx, pos.x, pos.y);
+        entity.draw(ctx);
     }
 }
