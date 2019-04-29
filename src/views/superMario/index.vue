@@ -12,6 +12,7 @@
 
 <script>
     import { loadLevel } from "./loaders";
+    import Timer from './Timer'
     import { loadBackgroundSprites } from "./sprite";
     import { Compositor } from "./Class/Compositor";
     import { createMario } from "./Class/entities";
@@ -32,18 +33,19 @@
                 let comp = new Compositor();
                 const backgroundLayer = createBackgroundLayer(level.backgrounds, backgroundSprite)
                 comp.layers.push(backgroundLayer);
-                const gravity = 0.5;
                 const mario = await createMario(ctx);
+                const gravity = 30;
+                mario.pos.set(64, 180);
+                mario.vel.set(200, -300);
                 const spriteLayer = createSpriteLayer(mario);
                 comp.layers.push(spriteLayer);
-                let update = () => {
+                const timer = new Timer(1/60);
+                timer.update = function update(deltaTime) {
                     comp.draw(ctx);
-                    mario.draw(ctx);
-                    mario.update();
+                    mario.update(deltaTime);
                     mario.vel.y += gravity;
-                    requestAnimationFrame(update);
                 };
-                update();
+                timer.start();
             },
             init() {
                 this.canvas = document.getElementById('screen');
