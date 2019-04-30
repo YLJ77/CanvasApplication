@@ -1,26 +1,53 @@
-function drawBackground(ctx, background, sprites) {
-    background.ranges.forEach(([x1, x2, y1, y2]) => {
-        for(let x=x1; x<x2; ++x) {
-            for (let y=y1; y<y2; ++y) {
-                sprites.drawTile(background.tile, ctx, x, y);
-            }
-        }
-    })
-}
-export  function createBackgroundLayer(backgrounds, sprites) {
+export  function createBackgroundLayer(level, sprites) {
     const buffer = document.createElement('canvas');
+    const ctx = buffer.getContext('2d');
     buffer.width = 256;
     buffer.height = 240;
-    backgrounds.forEach(background => {
-        drawBackground(buffer.getContext('2d'), background, sprites);
+
+    level.tiles.forEach((tile, x, y) => {
+        sprites.drawTile(tile.name, ctx, x, y);
     });
     return function drawBackgroundLayer(ctx) {
         ctx.drawImage(buffer, 0, 0);
     }
 }
 
-export function createSpriteLayer(entity) {
+export function createSpriteLayer(entities) {
     return function drawSpriteLayer(ctx) {
-        entity.draw(ctx);
+        entities.forEach(entity => {
+            entity.draw(ctx);
+        });
+    }
+}
+
+export function createCollisionLayer(level) {
+    const resolvedTiles = [];
+    const tileResolver = level.tileCollider.tiles;
+    const tileSize = tileResolver.tileSize;
+
+    const getByIndexOriginal = tileResolver.getByIndex;
+    tileResolver.getByIndex = function getByIndexFake(x, y) {
+        resolvedTiles.push({ x, y });
+        return getByIndexOriginal.call(tileResolver, x, y);
+    }
+
+    return function drawCollision(ctx) {
+        ctx.strokeStyle = 'blue';
+        resolvedTiles.forEach(({ x, y }) => {
+            ctx.beginPath();
+            ctx.rect(x * tileSize, y * tileSize, tileSize, tileSize);
+            ctx.stroke();
+        });
+
+
+        ctx.strokeStyle = 'red';
+        level.entities.forEach(entity => {
+            let { pos: { x, y }, size } = entity;
+            ctx.beginPath();
+            ctx.rect(x , y, size.x, size.y);
+            ctx.stroke();
+        });
+
+        resolvedTiles.length = 0;
     }
 }

@@ -13,11 +13,9 @@
 <script>
     import { loadLevel } from "./loaders";
     import Timer from './Timer'
-    import { loadBackgroundSprites } from "./sprite";
-    import { Compositor } from "./Class/Compositor";
     import { createMario } from "./Class/entities";
-    import { createBackgroundLayer, createSpriteLayer } from "./layers";
-    import Keyboard from './Class/KeyBoardState'
+    import { createCollisionLayer } from "./layers";
+    import { setupKeyboard } from "./input";
 
     export default {
         data() {
@@ -28,34 +26,30 @@
         },
         methods: {
             async draw() {
-                let { ctx } = this;
+                let { ctx, canvas } = this;
                 const mario = await createMario(ctx);
-                let backgroundSprite = await loadBackgroundSprites(ctx);
-                let level = await loadLevel('1-1');
-                let comp = new Compositor();
-                const backgroundLayer = createBackgroundLayer(level.backgrounds, backgroundSprite)
-                comp.layers.push(backgroundLayer);
-                const gravity = 2000;
-                mario.pos.set(14, 180);
+                const level = await loadLevel('1-1', ctx);
+                mario.pos.set(14, 64);
+                level.entities.add(mario);
+                level.comp.layers.push(createCollisionLayer(level));
 
-                const SPACE = 32;
-                const input = new Keyboard();
-                input.addMapping(SPACE, keyState => {
-                    if (keyState) {
-                        mario.jump.start();
-                    } else {
-                        mario.jump.cancel();
-                    }
-                });
+                const input = setupKeyboard(mario);
                 input.listenTo(window);
 
-                const spriteLayer = createSpriteLayer(mario);
-                comp.layers.push(spriteLayer);
+                ['mousedown', 'mousemove'].forEach(eventName => {
+                    canvas.addEventListener(eventName, event => {
+                        if (event.buttons === 1) {
+                            mario.vel.set(0, 0);
+                            mario.pos.set(event.offsetX, event.offsetY);
+                        }
+                    })
+                });
+
                 const timer = new Timer(1/60);
                 timer.update = function update(deltaTime) {
-                    mario.update(deltaTime);
-                    comp.draw(ctx);
-                    mario.vel.y += gravity * deltaTime;
+                    // mario.update(deltaTime);
+                    level.update(deltaTime);
+                    level.comp.draw(ctx);
                 };
                 timer.start();
             },
