@@ -14,7 +14,7 @@ export async function createMario(ctx) {
     mario.addTrait(new Jump());
     // mario.addTrait(new Velocity());
     mario.draw = function drawMario(ctx) {
-        marioSprite.draw('idle', ctx, this.pos.x, this.pos.y);
+        marioSprite.draw('idle', ctx, 0, 0);
     }
 
     return mario;

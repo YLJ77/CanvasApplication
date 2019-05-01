@@ -14,8 +14,10 @@
     import { loadLevel } from "./loaders";
     import Timer from './Timer'
     import { createMario } from "./Class/entities";
-    import { createCollisionLayer } from "./layers";
+    import { createCollisionLayer, createCameraLayer } from "./layers";
     import { setupKeyboard } from "./input";
+    import Camera from './Class/Camera'
+    import { setupMouseControl } from "./debugger";
 
     export default {
         data() {
@@ -27,29 +29,26 @@
         methods: {
             async draw() {
                 let { ctx, canvas } = this;
+                const camera = new Camera();
                 const mario = await createMario(ctx);
                 const level = await loadLevel('1-1', ctx);
+                window.camera = camera;
                 mario.pos.set(14, 64);
                 level.entities.add(mario);
-                level.comp.layers.push(createCollisionLayer(level));
+                level.comp.layers.push(
+                    createCollisionLayer(level),
+                    createCameraLayer(camera)
+                );
 
                 const input = setupKeyboard(mario);
                 input.listenTo(window);
 
-                ['mousedown', 'mousemove'].forEach(eventName => {
-                    canvas.addEventListener(eventName, event => {
-                        if (event.buttons === 1) {
-                            mario.vel.set(0, 0);
-                            mario.pos.set(event.offsetX, event.offsetY);
-                        }
-                    })
-                });
-
+                setupMouseControl(canvas, mario, camera);
                 const timer = new Timer(1/60);
                 timer.update = function update(deltaTime) {
                     // mario.update(deltaTime);
                     level.update(deltaTime);
-                    level.comp.draw(ctx);
+                    level.comp.draw(ctx, camera);
                 };
                 timer.start();
             },
