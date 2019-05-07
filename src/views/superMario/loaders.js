@@ -53,7 +53,7 @@ async function loadJson(url) {
 }
 
 export async function loadSpriteSheet(name) {
-    let sheetSpec = await loadJson(`/sprites/${name}.json`)
+    let sheetSpec = await loadJson(`sprites/${name}.json`)
     let image = await loadImage(sheetSpec.imageUrl);
     const sprites = new SpriteSheet(
         image,
@@ -87,7 +87,7 @@ export async function loadSpriteSheet(name) {
 }
 
 export async function loadLevel(name, ctx) {
-    let levelSpec = await loadJson(`/levels/${name}.json`)
+    let levelSpec = await loadJson(`levels/${name}.json`)
     const level = new Level();
     createTiles(level, levelSpec.backgrounds);
     let backgroundSprite = await loadSpriteSheet(levelSpec.spriteSheet);
