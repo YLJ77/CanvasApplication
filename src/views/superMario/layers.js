@@ -8,16 +8,20 @@ export  function createBackgroundLayer(level, sprites) {
 
     let startIndex, endIndex;
     function redraw(drawFrom, drawTo) {
-        if (drawFrom === startIndex && drawTo === endIndex) {
+/*        if (drawFrom === startIndex && drawTo === endIndex) {
             return;
-        }
+        }*/
         startIndex = drawFrom;
         endIndex = drawTo;
         for (let x = startIndex; x < endIndex; ++x) {
             const col = tiles.grid[x];
             if (col) {
                 col.forEach((tile, y) => {
-                    sprites.drawTile(tile.name, ctx, x - startIndex, y);
+                    if (sprites.animations.has(tile.name)) {
+                        sprites.drawAnim(tile.name, ctx, x - startIndex, y, level.totalTime);
+                    } else {
+                        sprites.drawTile(tile.name, ctx, x - startIndex, y);
+                    }
                 })
             }
         }
@@ -29,11 +33,11 @@ export  function createBackgroundLayer(level, sprites) {
         const drawTo = drawFrom + drawWidth;
         redraw(drawFrom, drawTo);
 
-        ctx.drawImage(buffer, -camera.pos.x % 16, -camera.pos.y);
+        ctx.drawImage(buffer, -camera.pos.x % 16, camera.pos.y);
     }
 }
 
-export function createSpriteLayer(entities, width=64, height=64) {
+export function createSpriteLayer(entities, width=16, height=16) {
     const spriteBuffer = document.createElement('canvas');
     spriteBuffer.width = width;
     spriteBuffer.height = height;

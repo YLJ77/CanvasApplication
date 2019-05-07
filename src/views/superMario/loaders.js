@@ -1,6 +1,7 @@
 import Level from './Class/Level'
 import { createBackgroundLayer, createSpriteLayer } from "./layers";
 import {SpriteSheet} from "./Class/SpriteSheet";
+import {createAnim} from "./anim";
 
 export function loadImage(src) {
     return new Promise(resolve => {
@@ -51,7 +52,7 @@ async function loadJson(url) {
     });
 }
 
-async function loadSpriteSheet(name) {
+export async function loadSpriteSheet(name) {
     let sheetSpec = await loadJson(`/sprites/${name}.json`)
     let image = await loadImage(sheetSpec.imageUrl);
     const sprites = new SpriteSheet(
@@ -60,14 +61,28 @@ async function loadSpriteSheet(name) {
         sheetSpec.tileH,
     );
 
-    sheetSpec.tiles.forEach(tileSpec => {
-        sprites.defineTile(
-            tileSpec.name,
-            tileSpec.index[0],
-            tileSpec.index[1]
-        )
-    });
+    if (sheetSpec.tiles) {
+        sheetSpec.tiles.forEach(tileSpec => {
+            sprites.defineTile(
+                tileSpec.name,
+                tileSpec.index[0],
+                tileSpec.index[1]
+            )
+        });
+    }
 
+    if (sheetSpec.frames) {
+        sheetSpec.frames.forEach(frameSpec => {
+            sprites.define(frameSpec.name, ...frameSpec.rect);
+        });
+    }
+
+    if (sheetSpec.animations) {
+        sheetSpec.animations.forEach(animSpec => {
+            const animation = createAnim(animSpec.frames, animSpec.frameLen)
+            sprites.defineAnim(animSpec.name, animation);
+        });
+    }
     return sprites;
 }
 

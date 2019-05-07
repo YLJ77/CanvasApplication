@@ -1,12 +1,30 @@
 <template>
     <div>
         <canvas id="screen" width="640" height="640">canvas not supported</canvas>
+<!--        <div class="test-img">
+            <div></div>
+        </div>-->
     </div>
 </template>
 
 <style lang="scss" scoped>
     canvas {
         border: 1px solid #ccc;
+    }
+    .test-img {
+        position: relative;
+        border: 1px solid red;
+        width: 513px;
+        height: 401px;
+        background: url("../../../public/img/characters.gif") center center no-repeat;
+        div {
+            width: 16px;
+            height: 16px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border: 1px solid green;
+        }
     }
 </style>
 

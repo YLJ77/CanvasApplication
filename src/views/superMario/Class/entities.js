@@ -1,20 +1,26 @@
 import { Entity } from "./Entity";
-import { loadMarioSprites } from "../sprite";
-import Velocity from '../traits/Velocity'
+import { loadSpriteSheet } from "../loaders";
 import Jump from '../traits/Jump'
 import Go from '../traits/Go'
+import { createAnim } from "../anim";
 
-
-export async function createMario(ctx) {
-    let marioSprite = await loadMarioSprites(ctx);
+export async function createMario() {
+    let marioSprite = await loadSpriteSheet('mario');
     const mario = new Entity();
     mario.size.set(16, 16);
 
     mario.addTrait(new Go());
     mario.addTrait(new Jump());
-    // mario.addTrait(new Velocity());
+
+    const runAnim = createAnim(['run-1', 'run-2', 'run-3'], 10);
+    function routeFrame(mario) {
+        if (mario.go.dir !== 0) {
+            return runAnim(mario.go.distance);
+        }
+        return 'idle';
+    }
     mario.draw = function drawMario(ctx) {
-        marioSprite.draw('idle', ctx, 0, 0);
+        marioSprite.draw(routeFrame(this), ctx, 0, 0, mario.go.heading < 0);
     }
 
     return mario;
