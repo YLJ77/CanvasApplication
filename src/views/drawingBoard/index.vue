@@ -84,10 +84,10 @@
 </style>
 
 <script>
-    import { copyObj, drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "../util/appFunc";
-    import { Circle, RoundRect, Polygon, Line, BezierCurve } from "../util/shape";
-    import { Protractor } from '../util/Protractor'
-    import { Eraser } from '../util/Eraser'
+    import { copyObj, drawGuidewires, drawGrid, windowToCanvas, saveDrawingSurface, restoreDrawingSurface } from "./appFunc";
+    import { Circle, RoundRect, Polygon, Line, BezierCurve } from "./shape";
+    import { Protractor } from './Protractor'
+    import { Eraser } from './Eraser'
 
     export default {
         data() {
