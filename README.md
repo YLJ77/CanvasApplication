@@ -1,6 +1,7 @@
-# drawing board / 画板
+# javascript canvas application
 
-## [演示环境(https://ylj77.github.io/Drawing-Board)](https://ylj77.github.io/Drawing-Board)
+## [drawing board demo env(https://ylj77.github.io/Drawing-Board)](https://ylj77.github.io/Drawing-Board)
+## [super mario demo env(https://ylj77.github.io/Drawing-Board)](https://ylj77.github.io/Drawing-Board/#/mario)
 
 ## Project setup
 ```
