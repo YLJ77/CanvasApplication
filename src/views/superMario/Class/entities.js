@@ -7,12 +7,16 @@ import { createAnim } from "../anim";
 export async function createMario() {
     let marioSprite = await loadSpriteSheet('mario');
     const mario = new Entity();
+    const SLOW_DRAG = 1/2000;
+    const FAST_DRAG = 1/5000;
     mario.size.set(16, 16);
 
     mario.addTrait(new Go());
     mario.addTrait(new Jump());
 
-    const runAnim = createAnim(['run-1', 'run-2', 'run-3'], 10);
+    mario.go.dragFactor = SLOW_DRAG;
+
+    const runAnim = createAnim(['run-1', 'run-2', 'run-3'], 8);
     function routeFrame(mario) {
         if (mario.jump.falling) {
             return 'jump';
@@ -28,6 +32,10 @@ export async function createMario() {
     }
     mario.draw = function drawMario(ctx) {
         marioSprite.draw(routeFrame(this), ctx, 0, 0, mario.go.heading < 0);
+    }
+
+    mario.turbo = function setTurboState(turboOn) {
+        this.go.dragFactor = turboOn ? FAST_DRAG : SLOW_DRAG;
     }
 
     return mario;
