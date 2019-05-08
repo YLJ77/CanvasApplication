@@ -1,9 +1,9 @@
 import Keyboard from './Class/KeyBoardState'
 
 export function setupKeyboard(entity) {
-    const SPACE = 'KeyP';
-    const RIGHT = 'KeyD';
-    const LEFT = 'KeyA';
+    const SPACE = 'Space';
+    const RIGHT = 'ArrowRight';
+    const LEFT = 'ArrowLeft';
     const input = new Keyboard();
     input.addMapping(SPACE, keyState => {
         if (keyState) {

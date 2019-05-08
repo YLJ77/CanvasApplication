@@ -54,7 +54,7 @@
                 mario.pos.set(14, 64);
                 level.entities.add(mario);
                 level.comp.layers.push(
-                    createCollisionLayer(level),
+                    // createCollisionLayer(level),
                     createCameraLayer(camera)
                 );
 
