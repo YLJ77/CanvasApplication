@@ -4,17 +4,26 @@ export default class Jump extends Trait{
     constructor() {
         super('jump');
 
+        this.ready = false;
         this.duration = 0.5;
         this.velocity = 400;
         this.engageTime = 0;
     }
 
     start() {
-        this.engageTime = this.duration;
+        if (this.ready) {
+            this.engageTime = this.duration;
+        }
     }
 
     cancel() {
         this.engageTime = 0;
+    }
+
+    obstruct(entity, side) {
+        if (side === 'bottom') {
+            this.ready = true;
+        }
     }
 
     update(entity, deltaTime) {
@@ -22,5 +31,6 @@ export default class Jump extends Trait{
             entity.vel.y = -this.velocity;
             this.engageTime -= deltaTime;
         }
+        this.ready = false;
     }
 }

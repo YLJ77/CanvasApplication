@@ -5,6 +5,10 @@ export class Trait {
         this.NAME = name;
     }
 
+    obstruct() {
+
+    }
+
     update() {
         console.warn('Unhandled call');
     }
@@ -16,6 +20,12 @@ export class Entity {
         this.vel = new Vec2(0, 0);
         this.size = new Vec2(0, 0);
         this.traits = [];
+    }
+
+    obstruct(side) {
+        this.traits.forEach(trait => {
+            trait.obstruct(this, side);
+        })
     }
 
     addTrait(trait) {
