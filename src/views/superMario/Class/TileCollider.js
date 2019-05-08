@@ -46,6 +46,7 @@ export default class TileCollider {
                 if (entity.pos[dir] < match[`${dir}2`]) {
                     entity.pos[dir] = match[`${dir}2`];
                     entity.vel[dir] = 0;
+                    entity.obstruct('top');
                 }
             }
         });
