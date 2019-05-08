@@ -1,7 +1,7 @@
 # javascript canvas application
 
-## [drawing board demo env(https://ylj77.github.io/CanvasApplication)](https://ylj77.github.io/CanvasApplication)
-## [super mario demo env(https://ylj77.github.io/CanvasApplication/#/mario)(未完成)](https://ylj77.github.io/CanvasApplication/#/mario)
+## [drawing board demo env(https://ylj77.github.io/CanvasApplication/dist)](https://ylj77.github.io/CanvasApplication/dist)
+## [super mario demo env(https://ylj77.github.io/CanvasApplication/dist/#/mario)(未完成)](https://ylj77.github.io/CanvasApplication/dist/#/mario)
 
 ## Project setup
 ```
