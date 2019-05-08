@@ -14,7 +14,7 @@ export async function createMario() {
 
     const runAnim = createAnim(['run-1', 'run-2', 'run-3'], 10);
     function routeFrame(mario) {
-        if (!mario.jump.ready) {
+        if (mario.jump.falling) {
             return 'jump';
         }
 
