@@ -1,8 +1,17 @@
 import { Vec2 } from "./math";
 
+export const Sides = {
+    TOP: Symbol('top'),
+    BOTTOM: Symbol('bottom')
+};
+
 export class Trait {
     constructor(name) {
         this.NAME = name;
+    }
+
+    obstruct() {
+
     }
 
     update() {
@@ -16,6 +25,12 @@ export class Entity {
         this.vel = new Vec2(0, 0);
         this.size = new Vec2(0, 0);
         this.traits = [];
+    }
+
+    obstruct(side) {
+        this.traits.forEach(trait => {
+            trait.obstruct(this, side);
+        })
     }
 
     addTrait(trait) {

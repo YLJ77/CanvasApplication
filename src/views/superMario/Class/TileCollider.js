@@ -1,4 +1,6 @@
 import TileResolver from './TileResolver'
+import { Sides } from "./Entity";
+
 export default class TileCollider {
     constructor(tileMatrix) {
         this.tiles = new TileResolver(tileMatrix);
@@ -39,11 +41,14 @@ export default class TileCollider {
                 if (entity.pos[dir] + entity.size[dir] > match[`${dir}1`]) {
                     entity.pos[dir] = match[`${dir}1`] - entity.size[dir];
                     entity.vel[dir] = 0;
+
+                    entity.obstruct(Sides.BOTTOM);
                 }
             } else if (entity.vel[dir] < 0) {
                 if (entity.pos[dir] < match[`${dir}2`]) {
                     entity.pos[dir] = match[`${dir}2`];
                     entity.vel[dir] = 0;
+                    entity.obstruct(Sides.TOP);
                 }
             }
         });
