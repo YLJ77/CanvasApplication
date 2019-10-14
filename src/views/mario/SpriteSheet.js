@@ -5,28 +5,38 @@ export default class SpriteSheet{
         this.spriteHeight = spriteHeight;
         this.tiles = new Map();
     }
-    define({ name, imgXSizeUnit, imgYSizeUnit }) {
+    define({ name, imgX, imgY, spriteWidth, spriteHeight }) {
         const buffer = document.createElement('canvas');
         buffer.width = this.spriteWidth;
         buffer.height = this.spriteHeight;
         buffer.getContext('2d').
             drawImage(this.img,
-                imgXSizeUnit * this.spriteWidth,
-                imgYSizeUnit * this.spriteHeight,
-                this.spriteWidth,   // sw
-                this.spriteHeight,  // sh
+                imgX,
+                imgY,
+                spriteWidth,   // sw
+                spriteHeight,  // sh
                 0,
                 0,
-                this.spriteWidth,   // spriteWidth
-                this.spriteHeight   // spriteHeight
+                spriteWidth,   // spriteWidth
+                spriteHeight   // spriteHeight
             );
         this.tiles.set(name, buffer);
+    }
+    defineTile({ name, widthTimes, heightTimes }) {
+        const { spriteWidth, spriteHeight } = this;
+        this.define({
+            name,
+            imgX: widthTimes * spriteWidth,
+            imgY: heightTimes * spriteHeight,
+            spriteWidth,
+            spriteHeight
+        })
     }
     draw({ name, ctx, dx, dy }) {
         const buffer = this.tiles.get(name);
         ctx.drawImage(buffer, dx, dy);
     }
-    drawTile({ name, ctx, imgXSizeUnit, imgYSizeUnit }) {
-        this.draw({ name, ctx, dx: imgXSizeUnit * this.spriteWidth, dy: imgYSizeUnit * this.spriteHeight });
+    drawTile({ name, ctx, widthTimes, heightTimes }) {
+        this.draw({ name, ctx, dx: widthTimes * this.spriteWidth, dy: heightTimes * this.spriteHeight });
     }
 }

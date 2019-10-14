@@ -7,7 +7,7 @@ export function loadImg(url) {
         })
     });
 }
-export function loadJson({ url }) {
+export function loadLevel({ url }) {
     return new Promise(resolve => {
         fetch(url).then(r => {
             resolve(r.json());

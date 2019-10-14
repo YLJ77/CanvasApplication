@@ -3,8 +3,10 @@
 </template>
 
 <script>
-    import { loadImg, loadJson } from "./loaders";
-    import SpriteSheet from './SpriteSheet'
+    import { loadLevel } from "./loaders";
+    import { loadBackgroundSprites, loadMarioSprites } from "@/views/mario/sprites";
+    import { createBackgroundLayer, createSpriteLayer } from "@/views/mario/layers";
+    import Compositor from './Compositor'
 
     export default {
         data() {
@@ -16,24 +18,29 @@
             initContext() {
                 this.ctx = this.$refs.screen.getContext('2d');
             },
-            async drawBackground({ background, ctx, sprites }) {
-                const {tile, ranges: [x1,x2,y1,y2]} = background;
-                for (let imgXSizeUnit=x1; imgXSizeUnit<x2; imgXSizeUnit++) {
-                    for (let imgYSizeUnit=y1; imgYSizeUnit<y2; imgYSizeUnit++) {
-                        sprites.drawTile({ name: tile, ctx, imgXSizeUnit, imgYSizeUnit });
-                    }
-                }
-            },
             main() {
                 const { ctx } = this;
-                loadImg('img/tiles.png').then(async img => {
-                    const level = await loadJson({ url: 'levels/1.json' });
-                    const sprites = new SpriteSheet({ img, spriteWidth: 16, spriteHeight: 16 });
-                    sprites.define({ name: 'ground', imgXSizeUnit: 0, imgYSizeUnit: 0 });
-                    sprites.define({ name: 'sky', imgXSizeUnit: 3, imgYSizeUnit: 23 });
-                    level.backgrounds.forEach(background => {
-                        this.drawBackground({ background, ctx, sprites });
-                    });
+                Promise.all([
+                    loadBackgroundSprites(),
+                    loadMarioSprites(),
+                    loadLevel({ url: 'levels/1.json' })
+                ]).then(([backgroundSprite, marioSprite, level]) => {
+                    const pos = {
+                        x: 64,
+                        y: 64
+                    };
+                    const comp = new Compositor();
+                    const backgroundLayer = createBackgroundLayer({ backgrounds: level.backgrounds, sprites: backgroundSprite })
+                    const spriteLayer = createSpriteLayer({ sprite: marioSprite, pos });
+                    comp.layers.push(backgroundLayer, spriteLayer);
+
+                    function update() {
+                        comp.draw(ctx);
+                        pos.x +=2;
+                        pos.y += 2;
+                        requestAnimationFrame(update);
+                    }
+                    update();
                 });
             }
         },
