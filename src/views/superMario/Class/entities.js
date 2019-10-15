@@ -5,7 +5,7 @@ import Go from '../traits/Go'
 import { createAnim } from "../anim";
 
 export async function createMario() {
-    let marioSprite = await loadSpriteSheet('mario');
+    let marioSprites = await loadSpriteSheet('mario');
     const mario = new Entity();
     const SLOW_DRAG = 1/2000;
     const FAST_DRAG = 1/5000;
@@ -31,7 +31,7 @@ export async function createMario() {
         return 'idle';
     }
     mario.draw = function drawMario(ctx) {
-        marioSprite.draw(routeFrame(this), ctx, 0, 0, mario.go.heading < 0);
+        marioSprites.draw(routeFrame(this), ctx, 0, 0, mario.go.heading < 0);
     }
 
     mario.turbo = function setTurboState(turboOn) {

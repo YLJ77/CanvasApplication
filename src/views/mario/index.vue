@@ -7,6 +7,7 @@
     import { loadBackgroundSprites, loadMarioSprites } from "@/views/mario/sprites";
     import { createBackgroundLayer, createSpriteLayer } from "@/views/mario/layers";
     import Compositor from './Compositor'
+    import Entity from './Entity'
 
     export default {
         data() {
@@ -24,20 +25,22 @@
                     loadBackgroundSprites(),
                     loadMarioSprites(),
                     loadLevel({ url: 'levels/1.json' })
-                ]).then(([backgroundSprite, marioSprite, level]) => {
-                    const pos = {
-                        x: 64,
-                        y: 64
-                    };
+                ]).then(([backgroundSprites, marioSprites, level]) => {
+                    const gravity = 0.5;
+                    const mario = new Entity({ sprite: marioSprites.tiles.get('idle') });
                     const comp = new Compositor();
-                    const backgroundLayer = createBackgroundLayer({ backgrounds: level.backgrounds, sprites: backgroundSprite })
-                    const spriteLayer = createSpriteLayer({ sprite: marioSprite, pos });
-                    comp.layers.push(backgroundLayer, spriteLayer);
+                    const backgroundLayer = createBackgroundLayer({ backgrounds: level.backgrounds, sprites: backgroundSprites })
+                    const spriteLayer = createSpriteLayer({ entity: mario});
+                    comp.layers.push(
+                        // backgroundLayer,
+                        spriteLayer);
+                    mario.pos.set(64, 100);
+                    mario.vel.set(2, -10);
 
                     function update() {
                         comp.draw(ctx);
-                        pos.x +=2;
-                        pos.y += 2;
+                        mario.update();
+                        mario.vel.y += gravity;
                         requestAnimationFrame(update);
                     }
                     update();

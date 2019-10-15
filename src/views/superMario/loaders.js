@@ -60,8 +60,8 @@ export async function loadLevel(name) {
     let levelSpec = await loadJson(`levels/${name}.json`)
     const level = new Level();
     createTiles(level, levelSpec.backgrounds, levelSpec.patterns);
-    let backgroundSprite = await loadSpriteSheet(levelSpec.spriteSheet);
-    const backgroundLayer = createBackgroundLayer(level, backgroundSprite);
+    let backgroundSprites = await loadSpriteSheet(levelSpec.spriteSheet);
+    const backgroundLayer = createBackgroundLayer(level, backgroundSprites);
     level.comp.layers.push(backgroundLayer);
     const spriteLayer = createSpriteLayer(level.entities);
     level.comp.layers.push(spriteLayer);

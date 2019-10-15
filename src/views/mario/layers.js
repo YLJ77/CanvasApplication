@@ -18,8 +18,8 @@ export function createBackgroundLayer({ backgrounds, sprites }) {
         ctx.drawImage(buffer, 0, 0);
     }
 }
-export function createSpriteLayer({ sprite, pos }) {
+export function createSpriteLayer({ entity }) {
     return function (ctx) {
-        sprite.draw({ name: 'idle', ctx, dx: pos.x, dy: pos.y });
+        entity.draw({ ctx });
     }
 }
