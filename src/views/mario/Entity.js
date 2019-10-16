@@ -6,9 +6,10 @@ export default class Entity {
         this.pos = new Vec2(0, 0);
         this.vel = new Vec2(0, 0);
     }
-    update() {
-        this.pos.x += this.vel.x;
-        this.pos.y += this.vel.y;
+    update({ deltaTime }) {
+        if (deltaTime > 0.1) return;
+        this.pos.x += this.vel.x * deltaTime;
+        this.pos.y += this.vel.y * deltaTime;
     }
     draw({ ctx }) {
         const { pos } = this;
