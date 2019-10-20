@@ -5,11 +5,16 @@ export default class Entity {
         this.sprite = sprite;
         this.pos = new Vec2(0, 0);
         this.vel = new Vec2(0, 0);
+        this.traits = [];
     }
     update({ deltaTime }) {
-        if (deltaTime > 0.1) return;
-        this.pos.x += this.vel.x * deltaTime;
-        this.pos.y += this.vel.y * deltaTime;
+        this.traits.forEach(trait => {
+           trait.update({ entity: this, deltaTime });
+        });
+    }
+    addTrait(trait) {
+        this.traits.push(trait);
+        this[trait.NAME] = trait;
     }
     draw({ ctx }) {
         const { pos } = this;

@@ -9,6 +9,9 @@
     import Compositor from './Compositor'
     import Entity from './Entity'
     import Timer from './Timer'
+    import Keyboard from './Keyboard'
+    import Velocity from './traits/Velocity'
+    import Jump from './traits/Jump'
 
     export default {
         data() {
@@ -27,21 +30,39 @@
                     loadMarioSprites(),
                     loadLevel({ url: 'levels/1.json' })
                 ]).then(([backgroundSprites, marioSprites, level]) => {
-                    const gravity = 30;
+                    const gravity = 2000;
+                    // const gravity = 10;
                     const mario = new Entity({ sprite: marioSprites.tiles.get('idle') });
                     const comp = new Compositor();
                     const backgroundLayer = createBackgroundLayer({ backgrounds: level.backgrounds, sprites: backgroundSprites })
                     const spriteLayer = createSpriteLayer({ entity: mario});
+                    const  input = new Keyboard();
+                    const SPACE = 32;
+
                     comp.layers.push(
                         backgroundLayer,
                         spriteLayer);
                     mario.pos.set(64, 180);
-                    mario.vel.set(200, -600);
+                    mario.vel.set(0, -4200);
+                    mario.addTrait(new Velocity());
+                    mario.addTrait(new Jump());
+                    input.addMapping({
+                        keyCode: SPACE,
+                        callback: keyState => {
+                            if (keyState) {
+                                mario.jump.start();
+                            } else {
+                                mario.jump.cancel();
+                            }
+                        }
+                    });
+                    input.listenTo(window);
+                    comp.draw(ctx);
                     const timer = new Timer({
                         update: deltaTime => {
-                            comp.draw(ctx);
                             mario.update({ deltaTime });
-                            mario.vel.y += gravity;
+                            comp.draw(ctx);
+                            mario.vel.y += gravity * deltaTime;
                         }
                     });
                     timer.start();
